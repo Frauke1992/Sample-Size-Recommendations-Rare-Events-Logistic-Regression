@@ -1,5 +1,5 @@
 #### Requires the script "Analysis Functions" ####
-
+#### Requires the folder "Results Data after Model Development" to be downloaded
 ##### Load neccessary packages #####
 
 library(stringr)
@@ -22,15 +22,18 @@ source(paste0(directory_script, "/Analysis functions.R"))
 # Set the levels of NV
 n_noise <- c (5, 10, 20, 30)
 
+
+# Input directory to folder containing folder "Results Data after Model Development"
+# with results folders
+directory_data <- "C:/Users/Frauke/Desktop/Masterarbeit/Results"
 # Loop to import evaluation data, cycles through different folders 
 # for each number of NV 
 results_total <- sapply(n_noise, FUN = function (current_noise){
 
   # Get list of files containing evaluation data of current number of NV
-  file_names <- list.files(path = paste0("C:/Users/Frauke/Desktop/",
-                                         "Masterarbeit/Results/Results ", 
-                                         current_noise, 
-                                         " NV"), 
+  file_names <- list.files(path = paste0(directory_data, "Results Data",
+                                         " after Model Development/Results ", 
+                                         current_noise, " NV"), 
                            pattern = ".rda")
   # Split the file names at underscores, keeping only the third part of the split
   # to get the name of the condition (combinations of sample size and events fraction)
@@ -39,7 +42,7 @@ results_total <- sapply(n_noise, FUN = function (current_noise){
   condition_name <- str_sub(condition_name, end = -5)
   
   # Set working directory to the folder with the evaluation data
-  setwd(paste0("C:/Users/Frauke/Desktop/Masterarbeit/Results/Results ",
+  setwd(paste0(directory_data, "Results Data after Model Development/Results ",
                current_noise, " NV"))
   
   # Loop over the files in the folder
