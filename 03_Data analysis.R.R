@@ -2,12 +2,11 @@
 
 ##### Load neccessary packages #####
 
-library(caret)
 library(stringr)
 library(dplyr)
 library(abind)
 library(str2str)
-library(ggplot2)
+#library(ggplot2)
 library(caret)
 
 
