@@ -1,14 +1,11 @@
 #### Requires the script "Data visualization setup" to be downloaded ####
 
 ##### Load neccessary packages #####
+
 library(str2str)
 library(ggplot2)
-#library(ggpattern)
 library(tidyr)
-#library(svglite)
-#library(Cairo)
-#library(devEMF)
-#library(jtools)
+library(devEMF)
 
 # set directory to folder containing necessary scripts
 directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
