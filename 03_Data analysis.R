@@ -1,14 +1,11 @@
 #### Requires the script "Analysis Functions" ####
 #### Requires the folder "Results Data after Model Development" to be downloaded
 ##### Load neccessary packages #####
-
 library(stringr)
 library(dplyr)
 library(abind)
 library(str2str)
-#library(ggplot2)
 library(caret)
-
 
 # Input directory to folder containing necessary scripts
 directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
