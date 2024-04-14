@@ -3,9 +3,6 @@
 ##### Load neccessary packages #####
 library(parallel)
 
-# Set working directory
-
-
 # set directory to folder containing necessary scripts
 directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
 
