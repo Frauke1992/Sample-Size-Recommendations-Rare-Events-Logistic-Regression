@@ -1,4 +1,4 @@
-# Questioning-Sample-Size-Recommendations
+# Sample Size Recommendations in Rare-Events Logistic Regression
 Code for analyses for master thesis titled "Questioning Sample Size Recommendations in Rare-Events Logistic Regressions – a Simulation Study"
 All data can be found at (enter Link)
 
