@@ -2,6 +2,11 @@
 #### Requires the script "Analysis Difference Noise True Compare" to be executed first ####
 ##### Load neccessary packages #####
 
+library(str2str)
+library(ggplot2)
+library(tidyr)
+library(devEMF)
+
 # set directory to folder containing necessary scripts
 directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
 
