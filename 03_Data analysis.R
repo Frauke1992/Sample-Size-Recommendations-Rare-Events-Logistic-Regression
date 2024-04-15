@@ -28,7 +28,7 @@ directory_data <- "C:/Users/Frauke/Desktop/Masterarbeit/Results"
 results_total <- sapply(n_noise, FUN = function (current_noise){
 
   # Get list of files containing evaluation data of current number of NV
-  file_names <- list.files(path = paste0(directory_data, "Results Data",
+  file_names <- list.files(path = paste0(directory_data, "/Results Data",
                                          " after Model Development/Results ", 
                                          current_noise, " NV"), 
                            pattern = ".rda")
@@ -39,7 +39,7 @@ results_total <- sapply(n_noise, FUN = function (current_noise){
   condition_name <- str_sub(condition_name, end = -5)
   
   # Set working directory to the folder with the evaluation data
-  setwd(paste0(directory_data, "Results Data after Model Development/Results ",
+  setwd(paste0(directory_data, "/Results Data after Model Development/Results ",
                current_noise, " NV"))
   
   # Loop over the files in the folder
@@ -103,23 +103,32 @@ warnings_total <- sapply(results_total, FUN = function(result_data_rearranged){
 #########################################################
 ############# Analysis true model frequency #############
 #########################################################
-
+# Initialize NV counter for the current analysis
 nv_counter <- 0
 # Loop to extract for each dataset whether the true parameters, true simple and
 # interaction effects as well as noise predictors and noise interactions are 
 # included in final models
 
 true_model_frequency <- sapply(results_total, FUN = function (result_data_rearranged){
+  # raise NV counter by 1
   nv_counter <<- nv_counter + 1
+  # extract number of NV from results_total
   n_noise <- names(results_total[nv_counter])
+  # Calculate number of predictors
   n_pred <- as.numeric(n_noise) + 3
+  # calculate number of regression weights
   n_weights <- (n_pred * (n_pred + 1)) / 2 + 1
   # Initialize counter for number of combinations of sample size and events fractions
   condition_counter <<- 0
+  
+  # loop through all combinations of sample size and events fractions
   true_model_current_NV<- sapply(result_data_rearranged, FUN = function(results){
+    # raise condition counter by 1
     condition_counter <<- condition_counter + 1
+    # Extract the current condition name 
     current_condition <- names(result_data_rearranged[condition_counter])
     
+    # Run custom function data.predictors to extract coefficient results
     predictor_results <- data.predictors(results, warnings_total, n_noise, current_condition)
     predictors_boolean <- apply(predictor_results, MARGIN = c(1, 2,3),
                                 FUN = function(current_sample) !is.na(current_sample))
@@ -229,22 +238,30 @@ number_true_model <- apply(true_model_array, MARGIN = c(1, 2, 3, 4, 6),
 ########################################################
 ############# Analysis predictor frequency #############
 ########################################################
-
+# Initialize NV counter for the current analysis
 nv_counter <- 0
 # Loop to calculate frequencies of the true parameters and average numbers as well
 # as 95%-quantiles of the quantities of noise predictors and noise interactions
 # in the final model
 predictor_frequency<- sapply(results_total, FUN = function (result_data_rearranged){
+  # raise NV counter by 1
   nv_counter <<- nv_counter + 1
+  # Extract the current number of NV 
   n_noise <- names(results_total[nv_counter])
+  # Calculate the current number of predictors 
   n_pred <- as.numeric(n_noise) + 3
+  # Calculate the current number of regression weights
   n_weights <- (n_pred * (n_pred + 1)) / 2 + 1
   # Initialize counter for number of combinations of sample size and events fractions
   condition_counter <<- 0
-  
+  # Loop through all combinations of sample size and events fractions
   frequency_predictor_results<- sapply(result_data_rearranged, FUN = function(results){
+    # raise condition counter by 1
     condition_counter <<- condition_counter + 1
+    # Extract the current condition name 
     current_condition <- names(result_data_rearranged[condition_counter])
+    
+    # Run custom function data.predictors to extract coefficient results
     predictor_results <- data.predictors(results, warnings_total, n_noise, current_condition)
     predictor_boolean <- !is.na(predictor_results)
     
@@ -355,18 +372,22 @@ ten_percent <- c("condition 2", "condition 6", "condition 10", "condition 14")
 thirty_percent <- c("condition 3", "condition 7", "condition 11", "condition 15")
 fifty_percent <- c("condition 4", "condition 8", "condition 12", "condition 16")
 
-# Initialize NV counter
+# Initialize NV counter for the current analysis
 nv_counter <- 0
 
 # Loop to calculate average relative BACC; as well as 95% percentiles
 balanced_accuracy_result <- sapply(results_total, FUN = function (result_data_rearranged){
+  # raise NV counter by 1
   nv_counter <<- nv_counter + 1
+  # Extract the current number of NV
   n_noise <- names(results_total[nv_counter])
   # Initialize counter for number of combinations of sample size and events fractions
   condition_counter <<- 0
+  # Loop through all combinations of sample size and events fractions
   balanced_accuracy_current_NV<- sapply(result_data_rearranged, FUN = function(results){
-    
+    # raise condition counter by 1
     condition_counter <<- condition_counter + 1
+    # Extract the name of the current condition
     current_condition <- names(result_data_rearranged[condition_counter])
     
     balanced_accuracy_data <- data.balanced.accuracy(results,
@@ -419,18 +440,22 @@ ten_percent <- c("condition 2", "condition 6", "condition 10", "condition 14")
 thirty_percent <- c("condition 3", "condition 7", "condition 11", "condition 15")
 fifty_percent <- c("condition 4", "condition 8", "condition 12", "condition 16")
 
-# Initialize NV counter
-nv_counter <- 0
+# Initialize NV counter for the current analysis
+nv_counter <- 0 
 
 # Loop to calculate average relative AUC; as well as 95% percentiles
 performance_metrics_results <- sapply(results_total, FUN = function(result_data_rearranged){
+  # raise NV counter by 1
   nv_counter <<- nv_counter + 1
   n_noise <- names(results_total[nv_counter])
   # Initialize counter for number of combinations of sample size and events fractions
   condition_counter <<- 0
   
+  # Loop through all combinations of sample size and events fractions
   performance_metrics_current_NV <- sapply(result_data_rearranged, FUN = function(results){
+    # raise NV counter by 1
     condition_counter <<- condition_counter + 1
+    # Extract the name of the current condition
     current_condition <- names(result_data_rearranged[condition_counter])
     
     performance_metrics_total <- data.performance.metrics(results, 
@@ -469,9 +494,7 @@ performance_metrics_results <- sapply(results_total, FUN = function(result_data_
                                           FUN = function (x) 
                                             quantile(x, probs = c(.025, .975),
                                                      na.rm = TRUE))
-    # performance_metrics_sd <- apply(performance_metrics_ratio, MARGIN = c(1, 2, 3),
-    #                                 FUN = function(x) sd(x, na.rm = TRUE))
-    
+
     results_performance_metrics <-  abind(performance_metrics_average, 
                                           performance_metrics_quantile[1,,,], 
                                           performance_metrics_quantile[2,,,],
@@ -496,11 +519,12 @@ beta_vector <- c(0.470003629, 1.029619417, 1.609437912,
 # each method-upsampling-combination
 beta_matrix <- matrix(rep(beta_vector,6),ncol=6)
 
-# Initialize NV counter
+# Initialize NV counter for the current analysis
 nv_counter <- 0
 # Loop to calculate average biases of the true parameters and average values of noise
 # predictors and noise interactions; as well as 95% percentiles
 results_bias_total <- sapply(results_total, FUN = function(result_data_rearranged){
+  # raise NV counter by 1
   nv_counter <<- nv_counter + 1
   # Extract the current number of NV 
   n_noise <- names(results_total[nv_counter])
@@ -511,11 +535,17 @@ results_bias_total <- sapply(results_total, FUN = function(result_data_rearrange
   # Initialize counter for number of combinations of sample size and events fractions
   condition_counter <<- 0
   
+  # Loop through all combinations of sample size and events fractions
   results_bias <- sapply(result_data_rearranged, function(results) {
+    # raise condition counter by 1
     condition_counter <<- condition_counter + 1
+    # Extract the current condition name 
     current_condition <- names(result_data_rearranged[condition_counter])
+    
+    # Run custom function data.predictors to extract coefficient results
     predictor_results <- data.predictors(results, warnings_total, n_noise, current_condition)
     
+    # Set up vector of indices of true parameters
     simulated_predictors <- c(2, 3, 4, n_pred + 2, n_pred + 3, (n_pred * 2 + 1))
     # Separate the coefficients for the true parameters from the rest
     simulated_predictor_values <- predictor_results[simulated_predictors, , ]
@@ -528,7 +558,7 @@ results_bias_total <- sapply(results_total, FUN = function(result_data_rearrange
     simulated_predictor_diff <- sapply(simulated_predictor_list, FUN = function(x){
       x
     }, simplify = "array")
-    
+    # Calculate average bias for each true parameter
     simulated_predictor_bias_average <- apply(simulated_predictor_diff, 
                                               MARGIN = c(1,2), FUN = function(x) 
                                                 mean(x, na.rm = TRUE))*100
@@ -539,9 +569,11 @@ results_bias_total <- sapply(results_total, FUN = function(result_data_rearrange
                                                           na.rm = TRUE))*100
 
     
+    # Set up vector of indices of noise predictors
     noise_predictors <- c(5 : (n_pred + 1))
     # Separate the coefficients for the noise predictors from the rest
     noise_pred_values <- predictor_results[noise_predictors, , ]
+    # Calculate average regression weight of noise predictors
     noise_predictor_average <- apply(noise_pred_values, 
                                      MARGIN = 2,
                                      FUN = function(x) mean(abs(x), na.rm = TRUE))
@@ -552,12 +584,12 @@ results_bias_total <- sapply(results_total, FUN = function(result_data_rearrange
                                         quantile(abs(x), probs = c(.025, .975),
                                                  na.rm = TRUE))
     
+    # Set up vector of indices of noise interactions
     noise_interactions <- c(c((n_pred + 4) : (2 * n_pred)), 
                             c((2 * n_pred + 2) : n_weights))
-    
     # Separate the coefficients for the noise interactions from the rest
     noise_interaction_values <- predictor_results[noise_interactions, , ]
-    #
+    # Calculate average regression weight of noise interactions
     noise_interaction_average <- apply(noise_interaction_values, 
                                        MARGIN = 2,
                                        FUN = function(x) mean(abs(x), na.rm = TRUE))
