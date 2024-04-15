@@ -228,22 +228,29 @@ data.balanced.accuracy <- function(sample_data, warnings, noise, condition){
     # Checks if warning happened in less than 50% of datasets for current 
     # condition for LR
     if(warnings["LogReg", condition, noise]< .5){
+      # Checks if no warning happened in the current dataset
       if(names(current_sample$LogReg[1]) == "coefficients"){
+        # Calculate balanced accuracy for LR without upsampling
+        # for both training and validation dataset
         logreg_train <- caret::confusionMatrix(
           current_sample$LogReg$confusionMatrixTraining, 
           positive = "1")$byClass["Balanced Accuracy"]
         logreg_val <- caret::confusionMatrix(
           current_sample$LogReg$confusionMatrixvalidation, 
           positive = "1")$byClass["Balanced Accuracy"]
+        
       } else{
+        # if a warning happened: return NA for all values
         logreg_train <- NA
         logreg_val <- NA
       }
     } else{
+      # if warnings happened in 50% or more of datasets: return NA for all values
       logreg_train <- NA
       logreg_val <- NA
     }
-    
+    # Calculate balanced accuracy for ElasticNet AUC without upsampling
+    # for both training and validation dataset
     enet_roc_train <- caret::confusionMatrix(
       current_sample$ElasticNetRoc$confusionMatrixTraining, 
       positive = "ONE")$byClass["Balanced Accuracy"]
@@ -251,16 +258,22 @@ data.balanced.accuracy <- function(sample_data, warnings, noise, condition){
       current_sample$ElasticNetRoc$confusionMatrixvalidation, 
       positive = "1")$byClass["Balanced Accuracy"]
     
+    # Calculate balanced accuracy for ElasticNet LL without upsampling
+    # for both training and validation dataset
     enet_ll_train <- caret::confusionMatrix(
       current_sample$ElasticNetLogloss$confusionMatrixTraining, 
       positive = "ONE")$byClass["Balanced Accuracy"]
     enet_ll_val <- caret::confusionMatrix(
       current_sample$ElasticNetLogloss$confusionMatrixvalidation, 
       positive = "1")$byClass["Balanced Accuracy"]
+    
     # Checks if warning happened in less than 50% of datasets for current 
     # condition for LR with upsampling
     if(warnings["UpsamplingLogReg", condition, noise]< .5){
+      # Checks if no warning happened in the current dataset
       if(names(current_sample$UpsamplingLogReg[1]) == "coefficients"){
+        # Calculate balanced accuracy for LR with upsampling
+        # for both training and validation dataset
         upsamp_logreg_train <- caret::confusionMatrix(
           current_sample$UpsamplingLogReg$confusionMatrixTraining, 
           positive = "1")$byClass["Balanced Accuracy"]
@@ -268,14 +281,18 @@ data.balanced.accuracy <- function(sample_data, warnings, noise, condition){
           current_sample$UpsamplingLogReg$confusionMatrixvalidation, 
           positive = "1")$byClass["Balanced Accuracy"]
       } else{
+        # if a warning happened: return NA for all values
         upsamp_logreg_train <- NA
         upsamp_logreg_val <- NA
       }
     } else{
+      # if warnings happened in 50% or more of datasets: return NA for all values
       upsamp_logreg_train <- NA
       upsamp_logreg_val <- NA
     }
     
+    # Calculate balanced accuracy for ElasticNet AUC with upsampling
+    # for both training and validation dataset
     upsamp_enet_roc_train <- caret::confusionMatrix(
       current_sample$UpsamplingElasticNetRoc$confusionMatrixTraining, 
       positive = "ONE")$byClass["Balanced Accuracy"]
@@ -283,6 +300,8 @@ data.balanced.accuracy <- function(sample_data, warnings, noise, condition){
       current_sample$UpsamplingElasticNetRoc$confusionMatrixvalidation, 
       positive = "1")$byClass["Balanced Accuracy"]
     
+    # Calculate balanced accuracy for ElasticNet LL with upsampling
+    # for both training and validation dataset
     upsamp_enet_ll_train <- caret::confusionMatrix(
       current_sample$UpsamplingElasticNetLogloss$confusionMatrixTraining, 
       positive = "ONE")$byClass["Balanced Accuracy"]
@@ -290,21 +309,25 @@ data.balanced.accuracy <- function(sample_data, warnings, noise, condition){
       current_sample$UpsamplingElasticNetLogloss$confusionMatrixvalidation, 
       positive = "1")$byClass["Balanced Accuracy"]
     
+    # Combine training results for all methods with and without upsampling
     train_results <- c(logreg_train, enet_roc_train, enet_ll_train, 
                        upsamp_logreg_train, upsamp_enet_roc_train, 
                        upsamp_enet_ll_train)
-    
+    # Combine validation results for all methods with and without upsampling
     validation_results <- c(logreg_val, enet_roc_val, enet_ll_val, 
                             upsamp_logreg_val, upsamp_enet_roc_val, 
                             upsamp_enet_ll_val)
     
+    # Combine results for training and validation     
     total_results <- rbind(train_results, validation_results)
     
+    # Set column names of the resulting matrix to the method-upsampling-combinations
     colnames(total_results) <- c("LogReg","EnetRoc", "EnetLogloss",
                                  "UpsamplingLogReg", "UpsamplingEnetRoc", 
                                  "UpsamplingEnetLogloss")
+    # Set row names of the matrix
     rownames(total_results) <- c("Train","Validation")
-    
+    # Return the matrix
     return(total_results)
   }, simplify = "array")
 }
@@ -320,42 +343,59 @@ data.performance.metrics <- function(sample_data, warnings, noise, condition){
     # Checks if warning happened in less than 50% of datasets for current 
     # condition for LR
     if(warnings["LogReg", condition, noise]< .5){
+      # Checks if no warning happened in the current dataset
       if(names(current_sample$LogReg[1]) == "coefficients"){
+        # Extract matrix with performance metrics for LR
         logreg <- as.data.frame(current_sample$LogReg$performanceMetrics)
+        # add column for the extracted log loss to match number of columns
+        # for ElasticNet
         logreg <- add_column(logreg, "logLossModel" = NA, .after = 2)
       } else{
+        # if a warning happened: return NA for all values
         logreg <- matrix(rep(NA, 8), ncol = 4)
       }
     } else{
+      # if warnings happened in 50% or more of datasets: return NA for all values
       logreg <- matrix(rep(NA, 8), ncol = 4)
     }
+    # Extract matrix with performance metrics
     enet_roc <- current_sample$ElasticNetRoc$performanceMetrics
-    
     enet_ll <- current_sample$ElasticNetLogloss$performanceMetrics
+    
     # Checks if warning happened in less than 50% of datasets for current 
     # condition for LR with upsampling
     if(warnings["UpsamplingLogReg", condition, noise] < .5){
+      # Checks if no warning happened in the current dataset
       if(names(current_sample$UpsamplingLogReg[1]) == "coefficients"){
-        upsamp_logreg <- as.data.frame(current_sample$UpsamplingLogReg$performanceMetrics)
+        # Extract matrix with performance metrics for LR
+        upsamp_logreg <- as.data.frame(current_sample$UpsamplingLogReg$
+                                         performanceMetrics)
+        # add column for the extracted log loss to match number of columns
+        # for ElasticNet
         upsamp_logreg <- add_column(upsamp_logreg, "logLossModel" = NA, .after = 2)
       } else{
+        # if a warning happened: return NA for all values
         upsamp_logreg <- matrix(rep(NA, 8), ncol = 4)
       }
     } else{
+      # if warnings happened in 50% or more of datasets: return NA for all values
       upsamp_logreg <- matrix(rep(NA, 8), ncol = 4)
     }
     
+    # Extract matrix with performance metrics
     upsamp_enet_roc <- current_sample$UpsamplingElasticNetRoc$performanceMetrics
-    
     upsamp_enet_ll <- current_sample$UpsamplingElasticNetLogloss$performanceMetrics
     
+    # Combine results for all methods with and without upsampling
     total_results <- abind(logreg, enet_roc, enet_ll, upsamp_logreg, 
                            upsamp_enet_roc, upsamp_enet_ll, along = 3)
     
+    # Set names of the unnamed dimension of the resulting array to the 
+    # method-upsampling-combinations
     dimnames(total_results)[[3]] <- c("LogReg","EnetRoc", "EnetLogloss",
                                       "UpsamplingLogReg", "UpsamplingEnetRoc", 
                                       "UpsamplingEnetLogloss")
-    
+    # Return the array
     return(total_results)
   }, simplify = "array")
 }
