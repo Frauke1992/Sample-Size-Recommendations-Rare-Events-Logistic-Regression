@@ -4,7 +4,7 @@
 ############################################################## 
 ################## Data visualization setup ################## 
 ############################################################## 
-
+#### Set up theme for all plots ####
 plot_theme <- theme(
   # Set font family for text elements
   text = element_text(family = "sans"),
@@ -60,6 +60,8 @@ plot_theme <- theme(
   strip.placement = "outside"  
 )
 
+
+#### Labels and levels for the simulation and evaluation factors #### 
 # Set labels for method factor
 method_labels <- as_labeller(c("EnetRoc" ="ElasticNet[AUC]", 
                                "EnetLogloss" ="ElasticNet[LL]"), 
@@ -79,3 +81,4 @@ samplesize_levels <- c("100", "500", "1,000", "5,000")
 method_levels <- c("EnetRoc", "EnetLogloss", "LogReg")
 
 # Set factor levels of upsampling
+upsampling_levels <- c("No Upsampling", "Upsampling")
