@@ -72,12 +72,13 @@ noise_true_compare <- sapply(results_total, FUN = function (result_data_rearrang
       
       # Custom function to get max value from all non-NA values
       my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA)
-      # Get max value of all noise predictors for each dataset and method
+      # Get max absolute value of all noise predictors for each dataset and method
       max_noise_predictors <- apply(noise_predictors_values, MARGIN = c(2,3), 
                                     FUN = function(x) my.max(abs(x)))
-      # Get max value of all noise interactions for each dataset and method
+      # Get max absolute value of all noise interactions for each dataset and method
       max_noise_interactions <- apply(noise_interaction_values, MARGIN = c(2,3), 
                                       FUN = function(x) my.max(abs(x)))
+      
       # Bind the value for the current true parameter and the max values of noise
       # parameters
       min_max_total <- abind(simulated_parameter,
@@ -95,113 +96,182 @@ noise_true_compare <- sapply(results_total, FUN = function (result_data_rearrang
                                   "pred_smaller_diff", "pred_bigger_diff", 
                                   "noise_inter_included", "interaction_smaller", 
                                   "inter_smaller_diff", "inter_bigger_diff")
+        # Check if the true parameter was found
         if(!is.na(min_max[1])){
+          # Set that value for true parameter foundin the matrix to 1
           noise_compare["true_found"] <- 1
+          # Check if no noise predictors were included in the final model
           if(is.na(min_max[2])){
+            # Set the value for noise predictor smaller than true parameter
+            # in the matrix to 1
             noise_compare["predictor_smaller"] <- 1
+            # Set the difference for noise predictor smaller to the value 
+            # of the true parameter
             noise_compare["pred_smaller_diff"] <- min_max[1]
           } else{
+            # Otherwise check if the value of the true parameter is bigger than 
+            # the biggest value of the noise predictors
             if(min_max[1] > min_max[2]){
+              # Set the value for noise predictor smaller than true parameter
+              # in the matrix to 1
               noise_compare["predictor_smaller"] <- 1
+              # Calculate the difference between true and noise value 
+              # for noise predictor smaller in matrix
+              # of the true parameter
               noise_compare["pred_smaller_diff"] <- min_max[1] - min_max[2]
             } else{
+              # Otherwise set the value for noise predictor smaller than true 
+              # parameter in the matrix to 0
               noise_compare["predictor_smaller"] <- 0
+              # Calculate the difference between true and noise value 
+              # for noise predictor bigger in matrix
               noise_compare["pred_bigger_diff"] <- min_max[1] - min_max[2]
             }
           }
+          # Check if no noise interaction was included in the final model
           if(is.na(min_max[3])){
+            # Set the value for noise interaction smaller than true parameter
+            # in the matrix to 1
             noise_compare["interaction_smaller"] <- 1
+            # Set the difference for noise interaction smaller to the value 
+            # of the true parameter
             noise_compare["inter_smaller_diff"] <- min_max[1]
           } else{
+            # Otherwise check if the value of the true parameter is bigger than 
+            # the biggest value of the noise interactions
             if(min_max[1] > min_max[3]){
+              # Set the value for noise interaction smaller than true parameter
+              # in the matrix to 1
               noise_compare["interaction_smaller"] <- 1
+              # Calculate the difference between true and noise value 
+              # for noise interaction smaller in matrix
               noise_compare["inter_smaller_diff"] <- min_max[1] - min_max[3]
             } else{
+              # Otherwise set the value for noise interaction smaller than 
+              # true parameter in the matrix to 0
               noise_compare["interaction_smaller"] <- 0
+              # Calculate the difference between true and noise value 
+              # for noise interaction bigger in matrix
               noise_compare["inter_bigger_diff"] <- min_max[1] - min_max[3]
             }
           }
           
         }
+        # Check if noise predictors were in the final model
         if(!is.na(min_max[2])){
+          # Set the value for noise predictors included to 1
           noise_compare["noise_pred_included"] <- 1
+          # Check if the true parameter was not found
           if(is.na(min_max[1])){
+            # Set the value for noise predictor smaller than true 
+            # parameter in the matrix to 0
             noise_compare["predictor_smaller"] <- 0
+            # Set the difference for noise interaction bigger to the value 
+            # of the noise predictor
             noise_compare["pred_bigger_diff"] <- min_max[2]
           }
         }
-        
+        # Check if noise interactions were in the final model
         if(!is.na(min_max[3])){
           noise_compare["noise_inter_included"] <- 1
+          # Check if the true parameter was not found
           if(is.na(min_max[1])){
+            # Otherwise set the value for noise interaction smaller than true 
+            # parameter in the matrix to 0
             noise_compare["interaction_smaller"] <- 0
+            # Set the difference for noise interaction bigger to the value 
+            # of the noise interaction
             noise_compare["inter_bigger_diff"] <- min_max[3]
           }
         }
 
-        
+        # return the matrix
         return(noise_compare)
       }, simplify = TRUE)
-
+    # add results_general to the total results
     noise_true[i,,,] <- results_general
     }
     
-
+    # return the array
     return(noise_true)
   }, simplify = "array")
 }, simplify = "array") 
 
-dimnames(noise_true_compare)
-samples <- noise_true_compare[,  ,1 ,1, 1, 1]
+
+# Loop over data to calculate relative frequencies of the noise parameters being
+# smaller than the true parameters
 compare_sum <- apply(noise_true_compare, MARGIN = c(1, 3, 5, 6),
                      FUN = function(samples){
-                       total_true <- sum(samples["true_found",], na.rm = TRUE)
+                       # Calculate the number of  datasets in which the respective 
+                       # true parameter was bigger than the noise predictor
                        total_noise_pred <- sum(samples["predictor_smaller",], 
                                                na.rm = TRUE)
+                       # Divide that number by 1000
                        rel_noise_pred <- total_noise_pred / 1000
+                       # Calculate the number of datasets in which the respective
+                       # true parameter was bigger than the noise interaction
                        total_noise_inter <- sum(samples["interaction_smaller",],
                                                 na.rm = TRUE)
+                       # Divide that number by 1000
                        rel_noise_inter <- total_noise_inter / 1000
                        
+                       # Bind the tesults for the noise predictors and noise interactions
                        results <- c(rel_noise_pred, rel_noise_inter)
                        
                      }, simplify = TRUE)
 
+# Set names of the new dimension
 dimnames(compare_sum)[[1]] <- c("noise_predictor", "noise_interaction")
 
+
+# Loop over data to calculate averages and 95%-quantiles of differences between
+# true and noise parameters
 compare_diff <- apply(noise_true_compare, MARGIN = c(1, 3, 5, 6),
                       FUN = function (samples){
+                        # Take only the differences between noise parameters and
+                        # true parameters from the data
                         differences <- samples[c(4,5,8,9),]
+                        # Loop over data
                         results <- apply(differences, MARGIN = 1, FUN = function(values) {
+                          # Initialize vector for results
                           results_vector <- c(rep(NA, 3))
-
+                          # Check if not all values are NA
                           if(sum(is.na(values))!= 1000){
-
+                          # Calculate average of absolute differences
                           average_value <- mean(abs(values), na.rm = TRUE)
+                          # calculate 95%-quantiles of absolute differences
                           value_quantiles <- quantile(abs(values), 
                                                           probs = c(.025, .975), 
                                                           na.rm = TRUE)
+                          
+                          # Bind averages, lower bounds and upper bounds in vector
                           results_vector <- c(average_value, value_quantiles[1], 
                                               value_quantiles[2])
                           }
+                          # Set names for vector
                           names(results_vector) <- c("mean", "lower_bound", 
                                                      "upper_bound")
+                          # Return vector with results
                           return(results_vector)
                         }, simplify = T)
-                        
+                        # return matrix
                         return(results)
                       }, simplify = TRUE)
 
+# Split first dimension of the array into two dimensions and bind them to new array
 compare_diff_sorted <- abind(compare_diff[1:3,,,,], compare_diff[4:6,,,,],
                              compare_diff[7:9,,,,],compare_diff[10:12,,,,], 
                              along = 6)
 
+# Set names for the first dimension
 dimnames(compare_diff_sorted)[[1]] <- c("mean", "lower_bound", 
                                         "upper_bound")
+
+# Split last dimension of the array into two dimensions and bind them to new array
 compare_diff_sorted_new <- abind(compare_diff_sorted[,,,,,1:2], 
                                  compare_diff_sorted[,,,,,3:4],
                                  along = 7)
 
-
+# Set names for the new dimensions
 dimnames(compare_diff_sorted_new)[[6]] <- c("noise_smaller", "noise_bigger")
 dimnames(compare_diff_sorted_new)[[7]] <- c("noise_predictor", "noise_interaction")
