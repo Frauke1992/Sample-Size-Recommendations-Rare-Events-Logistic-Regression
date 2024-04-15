@@ -105,10 +105,10 @@ warnings_total <- sapply(results_total, FUN = function(result_data_rearranged){
 #########################################################
 # Initialize NV counter for the current analysis
 nv_counter <- 0
+
 # Loop to extract for each dataset whether the true parameters, true simple and
 # interaction effects as well as noise predictors and noise interactions are 
 # included in final models
-
 true_model_frequency <- sapply(results_total, FUN = function (result_data_rearranged){
   # raise NV counter by 1
   nv_counter <<- nv_counter + 1
@@ -130,33 +130,42 @@ true_model_frequency <- sapply(results_total, FUN = function (result_data_rearra
     
     # Run custom function data.predictors to extract coefficient results
     predictor_results <- data.predictors(results, warnings_total, n_noise, current_condition)
+    # Check which values are not NA
     predictors_boolean <- apply(predictor_results, MARGIN = c(1, 2,3),
                                 FUN = function(current_sample) !is.na(current_sample))
     
-    
+    # Set up vector of indices of true parameters
     simulated_predictors <- c(2, 3, 4, n_pred + 2, n_pred + 3, (n_pred * 2 + 1))
+    # Separate the values for the true parameters from the rest
     simulated_predictors_boolean <- predictors_boolean[simulated_predictors, ,]
+    # Calculate the number of true predictors for each dataset
     number_simulated_predictors<- apply(simulated_predictors_boolean, 
                                         MARGIN = c(2,3),
                                         FUN = function(x) sum(x))
-    
+    # Calculate the number of true simple effects for each dataset
     number_simulated_simple_effects <- apply(simulated_predictors_boolean[1:3,,], 
                                              MARGIN = c(2,3), FUN = function(x) sum(x))
-    
+    # Calculate the number of true interactions for each dataset
     number_simulated_interactions <- apply(simulated_predictors_boolean[4:6,,], 
                                            MARGIN = c(2,3), FUN = function(x) sum(x))
     
-    
+    # Set up vector of indices of noise parameters
     noise_predictors <- c(5:(n_pred + 1))
+    # Separate the values for the noise parameters from the rest
     noise_pred_boolean <- predictors_boolean[noise_predictors, , ]
+    # Calculate the number of noise predictors for each dataset
     number_noise_predictors <- apply(noise_pred_boolean, MARGIN = c(2,3),
                                      FUN = function(x) sum(x))
     
+    # Set up vector of indices of noise interactions
     noise_interactions <- c(c((n_pred + 4):(2 * n_pred)), c((2 * n_pred + 2): n_weights))
+    # Separate the values for the noise interactions from the rest
     noise_interaction_boolean <- predictors_boolean[noise_interactions, ,]
+    # Calculate the number of noise interactions for each dataset
     number_noise_interaction <- apply(noise_interaction_boolean, MARGIN = c(2, 3),
                                       FUN = function(x) sum(x))
     
+    # Bind all the results in an array 
     total_predictors <- abind(number_simulated_predictors, 
                               number_simulated_simple_effects,
                               number_simulated_interactions,
@@ -164,13 +173,15 @@ true_model_frequency <- sapply(results_total, FUN = function (result_data_rearra
                               number_noise_interaction, along = 3)
     
     
-
+    # Set the names of the new dimension
     dimnames(total_predictors)[[3]] <- c("Simulated Predictors", 
                                          "Simulated Simple Effects",
                                          "Simulated Interactions",
                                          "Noise Predictors", 
                                          "Noise Interactions")
     
+    # Set results for LR or LR with upsampling to NA if the conditions have 
+    # warnings in more than 50% of datasets
     if(warnings_total["LogReg", current_condition, n_noise] > .5){
       total_predictors[1,,] <- NA
     }
@@ -178,6 +189,7 @@ true_model_frequency <- sapply(results_total, FUN = function (result_data_rearra
       total_predictors[4,,] <- NA
     }
     
+    # Return array
     return(total_predictors)
     
   }, simplify = "array") 
@@ -187,52 +199,57 @@ true_model_frequency <- sapply(results_total, FUN = function (result_data_rearra
 # data generating model, all simple effect and all interactions are included in 
 # the final model as well as whether no noise is included additionally
 true_model <- apply(true_model_frequency, MARGIN = c(1, 2, 4, 5), FUN = function (number){
+  # If not all values are NA
   if(is.na(sum(number)) == FALSE){
+  # initialize matrix
   model_numbers <- c(rep(FALSE, 6))
-
+  # Check if all true parameters were found
   if(number["Simulated Predictors"] == 6){
     model_numbers[1] <- TRUE
+    # Check if noise predictors and/or noise interactions were included
     if(number["Noise Predictors"] == 0 || number["Noise Interactions"]  == 0){
       model_numbers[4] <- TRUE
     }
   } 
+  # Check if all simple effects were found
   if (number["Simulated Simple Effects"] == 3){
     model_numbers[2] <- TRUE
+    # Check if noise predictors and/or noise interactions were included
     if(number["Noise Predictors"] == 0||number["Noise Interactions"]  == 0){
       model_numbers[5] <- TRUE
     }
   }
+  # Check if all true interactions were found
   if (number["Simulated Interactions"] == 3){
     model_numbers[3] <- TRUE
+    # Check if noise predictors and/or noise interactions were included
     if(number["Noise Predictors"] == 0||number["Noise Interactions"]  == 0){
       model_numbers[6] <- TRUE
     }
   }
-  } else(model_numbers <- c(rep(NA, 6)))
+  } else(model_numbers <- c(rep(NA, 6))) # else set complete matrix to NA
+  # Return the matrix
   return(model_numbers)
 }, simplify = TRUE)
 
-# Separates the first dimension of the last analysis to form the proper separations,
+# Separate the first dimension of the last analysis to form the proper separations,
 # binding the results along a new dimension of the array and then sorting the dimensions
 true_model_array <- aperm(abind(true_model[1:3, , , , ], true_model[4:6, , , , ], 
                                 along = 6), 
                           c(1, 6, 2, 4, 3, 5))
 
 
-# Sets the names of the new dimensions in the array (formed both by the separation 
+# Set the names of the new dimensions in the array (formed both by the separation 
 # previously performed and from the analysis) 
 dimnames(true_model_array)[[1]] <- c("Complete Model", "Simple Effects", "Interactions")
 dimnames(true_model_array)[[2]] <- c("True Model Included", "True Model Only")
 
-# calculates the relative frequencies of the complete data generating model, all 
+# calculate the relative frequencies of the complete data generating model, all 
 # simple effect and all interactions being included in the final model as well 
 # as being in the final model without additional noise parameters
 # Separately for each simulation condition
 number_true_model <- apply(true_model_array, MARGIN = c(1, 2, 3, 4, 6), 
                            FUN = function(x) sum(x)/1000)
-
-
-
 
 
 ########################################################
@@ -263,89 +280,100 @@ predictor_frequency<- sapply(results_total, FUN = function (result_data_rearrang
     
     # Run custom function data.predictors to extract coefficient results
     predictor_results <- data.predictors(results, warnings_total, n_noise, current_condition)
+    # Check which values are not NA
     predictor_boolean <- !is.na(predictor_results)
     
+    # Set up vector of indices of true parameters
     simulated_predictors <- c(2, 3, 4, n_pred + 2, n_pred + 3, (n_pred * 2 + 1))
-    
+    # Separate the values for the true parameters from the rest
     simulated_predictor_boolean <- predictor_boolean[simulated_predictors, , ]
-    
+    # Calculate the average over the datasets
     simulated_predictor_average <- apply(simulated_predictor_boolean, 
                                               MARGIN = c(1,2), FUN = function(x) 
                                                 mean(x, na.rm = TRUE))
-        
+    # Calculate the 95%-quantiles over the datasets    
     simulated_predictor_quantile <- apply(simulated_predictor_boolean, 
                                                MARGIN = c(1, 2), FUN = function (x) 
                                                  quantile(x, probs = c(.025, .975),
                                                           na.rm = TRUE))
-    
+    # Set up vector of indices of noise parameters
     noise_predictors <- c(5:(n_pred + 1))
+    # Separate the values for the noise parameters from the rest
     noise_pred_boolean <- predictor_boolean[noise_predictors, ,]
+    # Calculate the number of noise predictors for each dataset
     noise_predictor_number <- apply(noise_pred_boolean, MARGIN = c(2,3),
                                     FUN = function(x) {
                                       sum(x)})
-    
+    # Calculate the average over the datasets
     noise_predictor_average <- apply(noise_predictor_number, 
                                      MARGIN = 1, FUN = function(method){
                               mean(method)  
                             })
-
-  
+    # Calculate the 95%-quantiles over the datasets
     noise_predictor_quantile <- apply(noise_predictor_number, 
                                         MARGIN = 1, 
                                         FUN = function (x) 
                                           quantile(abs(x), probs = c(.025, .975),
                                                    na.rm = TRUE))
     
-    
-    
-    noise_interactions <- c(c((n_pred + 4):(2 * n_pred)), c((2 * n_pred + 2):n_weights))
+    # Set up vector of indices of noise interactions
+    noise_interactions <- c(c((n_pred + 4):(2 * n_pred)), 
+                            c((2 * n_pred + 2):n_weights))
+    # Separate the values for the noise interactions from the rest
     noise_interaction_boolean <- predictor_boolean[noise_interactions, ,]
+    # Calculate the number of noise interactions for each dataset
     noise_interaction_number <- apply(noise_interaction_boolean, MARGIN = c(2,3),
                                     FUN = function(x) {
                                       sum(x)})
-    
+    # Calculate the average over the datasets
     noise_interaction_average <- apply(noise_interaction_number, 
                                      MARGIN = 1, FUN = function(method){
                                        mean(method)  
                                      })
-    
-    
+    # Calculate the 95%-quantiles over the datasets
     noise_interaction_quantile <- apply(noise_interaction_number, 
                                       MARGIN = 1, 
                                       FUN = function (x) 
                                         quantile(abs(x), probs = c(.025, .975),
                                                  na.rm = TRUE))
 
-      
+    # Bind the averages for the true parameters, the noise predictors and the
+    # noise interactions by row
     total_predictors_average <- rbind(simulated_predictor_average, 
                                         noise_predictor_average, 
                                         noise_interaction_average)
-    
+    # Bind the lower bounds for the true parameters, the noise predictors and the
+    # noise interactions by row
     total_predictors_lower_bound <- rbind(simulated_predictor_quantile[1,,], 
                                           noise_predictor_quantile[1,], 
                                           noise_interaction_quantile[1,])
-    
+    # Bind the upper bounds for the true parameters, the noise predictors and the
+    # noise interactions by row
     total_predictors_upper_bound <- rbind(simulated_predictor_quantile[2,,], 
                                           noise_predictor_quantile[2,], 
                                           noise_interaction_quantile[2,])
     
-    
+    # Set the row names of the matrices containing the averages, lower bounds
+    # and upper bounds
     rownames(total_predictors_average) <- c(rownames(simulated_predictor_boolean),
                                             "Noise Predictors", "Noise Interactions")
-    
     rownames(total_predictors_lower_bound) <- rownames(total_predictors_average)
     rownames(total_predictors_upper_bound) <- rownames(total_predictors_average)
     
     
+    # Bind the matrices containing averages, lower bounds and upper bounds into
+    # a 3-dimensional array
     total_predictors <- abind(total_predictors_average, 
                               total_predictors_lower_bound,
                               total_predictors_upper_bound,
                               along = 3)
     
+    # Set the names of the new dimension
     dimnames(total_predictors)[[3]] <- c("mean", "lower_bound", "upper_bound")  
 
     
-    
+    # Set results for LR or LR with upsampling to NA if the conditions have 
+    # warnings in more than 50% of datasets
     if(warnings_total["LogReg", current_condition, n_noise] > .5){
       total_predictors[,1,] <- NA
     }
@@ -353,7 +381,7 @@ predictor_frequency<- sapply(results_total, FUN = function (result_data_rearrang
       total_predictors[,4,] <- NA
     }
           
-  
+    # Return the array
     return(total_predictors)
     
   }, simplify = "array") 
@@ -389,13 +417,14 @@ balanced_accuracy_result <- sapply(results_total, FUN = function (result_data_re
     condition_counter <<- condition_counter + 1
     # Extract the name of the current condition
     current_condition <- names(result_data_rearranged[condition_counter])
-    
+    # Run custom functionto extract BACC values
     balanced_accuracy_data <- data.balanced.accuracy(results,
                                                      warnings_total, 
                                                      n_noise, 
                                                      current_condition)
     
-
+    # Set the benchmark value by checking what group the name of the 
+    # current condition is in
     if(current_condition%in% five_percent){
       bacc_benchmark <- 0.8362169
     } else if (current_condition%in% ten_percent){
@@ -407,25 +436,31 @@ balanced_accuracy_result <- sapply(results_total, FUN = function (result_data_re
     } else{
       print("Unbekannte Condition!")
     }
-
+    # Calculate the relative BACC 
     balanced_accuracy_condition <- balanced_accuracy_data/ bacc_benchmark
     
+    # Calculate the average over the datasets
     balanced_accuracy_average <- apply(balanced_accuracy_condition, 
                                        MARGIN = c(1, 2), 
                                        FUN = function(x) 
                                          mean(x, na.rm = TRUE))
+    # Calculate the 95%-quantiles over datasets
     balanced_accuracy_quantile <- apply(balanced_accuracy_condition, 
                                           MARGIN = c(1, 2), 
                                         FUN = function (x) 
                                             quantile(x, probs = c(.025, .975),
                                                      na.rm = TRUE))
-
+    
+    # Bind the matrices containing averages, lower bounds and upper bounds into
+    # an array
     results_balanced_accuracy <-  abind(balanced_accuracy_average, 
                                         balanced_accuracy_quantile[1,,],
                                         balanced_accuracy_quantile[2,,],
                                         along = 3)
-    
-    dimnames(results_balanced_accuracy) [[3]] <- c("mean", "lower_bound", "upper_bound")
+    # Set the names of the new dimension
+    dimnames(results_balanced_accuracy) [[3]] <- c("mean", "lower_bound", 
+                                                   "upper_bound")
+    # Return the array
     return(results_balanced_accuracy)  
   }, simplify = "array")
   return(balanced_accuracy_current_NV)
@@ -458,13 +493,17 @@ performance_metrics_results <- sapply(results_total, FUN = function(result_data_
     # Extract the name of the current condition
     current_condition <- names(result_data_rearranged[condition_counter])
     
+    # Run custom function data.performance.metrics to extract performance metric
+    # results
     performance_metrics_total <- data.performance.metrics(results, 
                                                               warnings_total, 
                                                               n_noise, 
                                                               current_condition)
-    
+    # Remove the calculated log loss values
     performance_metrics_condition <- performance_metrics_total[,-3,,]
-
+    
+    # Set the benchmark value by checking what group the name of the 
+    # current condition is in
     if(current_condition%in% five_percent){
       performance_benchmark <- c(0.9422347,0.2154537, 0.082626)
     } else if (current_condition%in% ten_percent){
@@ -477,6 +516,7 @@ performance_metrics_results <- sapply(results_total, FUN = function(result_data_
       print("Unbekannte Condition!")
     }
     
+    # Caltulate the values relative to the benchmark value
     performance_metrics_ratio <- apply(performance_metrics_condition,
                                        MARGIN = c(1,3,4), 
                                        FUN = function (metrics){
@@ -484,24 +524,30 @@ performance_metrics_results <- sapply(results_total, FUN = function(result_data_
                                          return(ratio)
                                        })
     
+    # Calculate the average over the datasets
     performance_metrics_average <- apply(performance_metrics_ratio, 
                                          MARGIN = c(1, 2, 3), 
                                          FUN = function(x) 
                                            mean(x, na.rm = TRUE))
-    
+    # Calculate the 95%-quantiles of the datastes
     performance_metrics_quantile <- apply(performance_metrics_ratio, 
                                           MARGIN = c(1, 2, 3), 
                                           FUN = function (x) 
                                             quantile(x, probs = c(.025, .975),
                                                      na.rm = TRUE))
 
+    # Bind the matrices containing averages, lower bounds and upper bounds into
+    # an array
     results_performance_metrics <-  abind(performance_metrics_average, 
                                           performance_metrics_quantile[1,,,], 
                                           performance_metrics_quantile[2,,,],
                                           along = 4)
     
+    # Set the names of the new dimension
     dimnames(results_performance_metrics) [[4]] <- c("mean", "lower_bound", 
                                                      "upper_bound")
+    
+    # Return the array
     return(results_performance_metrics)
   }, simplify = "array")
   return(performance_metrics_current_NV)
