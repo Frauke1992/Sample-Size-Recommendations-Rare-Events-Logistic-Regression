@@ -13,6 +13,7 @@ directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
 # Load R-script containing setup for data visualization
 source(paste0(directory_script, "/Data visualization setup.R"))
 
+setwd("C:/Users/Frauke/Desktop/Masterarbeit/Graphs")
 
 ##############################################
 ############# Relative Frequency ############# 
@@ -108,7 +109,7 @@ compare_plot <- ggplot(final_data_compare,
   
   # Split plot into multiple plots, using effectsize for top and bottom split
   # and method for left and right split
-  facet_grid(effectsize ~ method, 
+  facet_grid(upsampling ~ method, 
              scales = "free_x",
              # Set label names for facets
              labeller = labeller(method = method_labels,
@@ -241,10 +242,10 @@ final_data_compare_diff <-final_data_compare_diff[final_data_compare_diff$weight
 compare_diff_plot <- ggplot(final_data_compare_diff,
                             aes(x = noise, # Use NV along x-axis
                                 y = mean, # use mean values as general y-values
-                                shape = prev, # make events fractions different
-                                              # colors 
-                                color = samplesize, # make samplesizes different
+                                shape = samplesize, # make samplesizes different
                                                     # shapes
+                                color = prev, # make events fractions different
+                                              # colors 
                                 # group by both sample size and events fraction:
                                 group = interaction(samplesize, prev))) +
   
@@ -304,7 +305,7 @@ emf(file = file_name,
     height = 11.4,
     units = "cm")
 # Plot object to be saved
-compare_diff_plot_true
+compare_diff_plot
 
 # Close the graphics device and save the plot as an EMF file
 dev.off()

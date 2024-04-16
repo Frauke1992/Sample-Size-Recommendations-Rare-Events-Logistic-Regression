@@ -293,7 +293,7 @@ reshaped_data_model$method <- gsub("Upsampling", "", reshaped_data_model$method)
 
 # Change all instances of "True Model Included" to "All True Parameters Included"
 reshaped_data_model$type <- gsub("True Model Included", 
-                                 "All True Parammeters Included",
+                                 "All True Parameters Included",
                                  reshaped_data_model$type)
 # Change all instances of "True Model Only" to "Data Generating Model Recovered"
 reshaped_data_model$type <- gsub("True Model Only", 
@@ -367,7 +367,7 @@ model_plot
 # Set up parameters for the EMF file
 emf(file = "Model Evaluation_Complete_no upsampling.emf", emfPlus = TRUE, 
     family = "sans", 
-    coordDPI = 800, width = 25, height = 10.6, units = "cm")
+    coordDPI = 800, width = 25, height = 11.1, units = "cm")
 # Plot object to be saved
 model_plot
 # Close the graphics device and save the plot as an EMF file
