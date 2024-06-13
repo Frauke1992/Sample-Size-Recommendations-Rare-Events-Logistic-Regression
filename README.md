@@ -31,6 +31,10 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 - out of memory in parallel evaluation, especially for large samples and many noise variables (potentially do not read in all samples at once, but if you do this, you need to change how the generated samples are stored)
 - output of logfile not fully helpful due to parallelization
 - function names are not updated to the numbered git version
-- marginal vs. conditional probability
-- how can we reliably detect separation?
+- marginal vs. conditional probability  (intercept for lower marginal prev: -7.373546
+- how can we reliably detect separation? (must already be changed in 02a -> line 373 (this is not necessarily separation! predicted probabilities close to 1 are not the same as separation) possibly, this needs to be changed in the glm-fitting function already
 - @Kristin: nochmal die glm und enet Sachen in caret stimmen inkl. upsamling
+- 02a: changing the marginal probability will create new errors because some metrics cannot be computed and there are often less than 8 observations with class = 1
+- in 03a: adapt how errrors are counted in the new version
+- 03a: predictors receive NA either when they are non-significant OR if log Reg has failed (then all are NA)
+- labels in figures need to be adapted when the conditions are changed
