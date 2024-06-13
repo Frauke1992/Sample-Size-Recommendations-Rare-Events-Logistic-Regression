@@ -26,3 +26,11 @@ In scripts 01 through 04 as well as 06, there is an object called "directory_scr
 The directory of the folder containing the respective script needs to be added here.
 
 In script 03, there is an object called "directory_data" in line 28. The directory of the folder containing the results folder "Results Data after Model Development" needs to be added here. 
+
+## Known issues
+- out of memory in parallel evaluation, especially for large samples and many noise variables (potentially do not read in all samples at once, but if you do this, you need to change how the generated samples are stored)
+- output of logfile not fully helpful due to parallelization
+- function names are not updated to the numbered git version
+- marginal vs. conditional probability
+- how can we reliably detect separation?
+- @Kristin: nochmal die glm und enet Sachen in caret stimmen inkl. upsamling
