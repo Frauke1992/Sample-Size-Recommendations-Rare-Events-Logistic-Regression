@@ -42,5 +42,5 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 ## Changes
 - logistische Regression in der jetzigen Form rauslöschen -> ersetzen die durch eine logistische Regression, (oracle) mit nur den wahren Prädiktoren und deren Interaktion (Was ist mit der Separation? detectseparation @Katrin) @Florian 
 - Ergänzung eines gbm @Kristin
-- Effekstärken an Kristins Metaanalyse verankern
+- Effektstärken an Kristins Metaanalyse verankern
 - anvisierte marginal probs: 0.5, 0.1, 0.05, 0.01, 0.005
