@@ -306,6 +306,8 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                                    number = 10,
                                    # class probabilities are computed and saved
                                    classProbs = TRUE,
+                                   # do not tell me everything about every iteration...
+                                   verboseIter = FALSE,
                                    # all prediction values are saved
                                    savePredictions = TRUE,
                                    returnData = TRUE, # saves the data
