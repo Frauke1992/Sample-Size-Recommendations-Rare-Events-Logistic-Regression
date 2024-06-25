@@ -4,16 +4,16 @@
 library(parallel)
 
 # set directory to folder containing necessary scripts
-directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
+directory_script <- getwd()
 
 # Load R-script containing setup for data visualization
-source(paste0(directory_script, "/Functions Sample Evaluation.R"))
+source(paste0(directory_script, "/02a_Functions Sample Evaluation.R"))
 
 
 
 ####### Sample evaluation #######
 #load the samples
-total_samples <- as.list(readRDS("samples_nnoise_30.rdata"))
+total_samples <- as.list(readRDS("samples_total.rdata"))
 condition_counter <- 0
 loop_counter <- 0
 
@@ -22,7 +22,7 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(20, 
+  clust <- makeCluster(10, 
                        type = "FORK", 
                        outfile = paste0(logFolder, "/Dateien/evaluationDataStatus", 
                                         Sys.Date(),".txt"))
@@ -42,11 +42,11 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
     # save the second sample of the list as the validation sample
     validation_sample <- current_sample[[2]] 
     # evaluate samples analyzed with caret without upsampling
-    output_caret <- results.caret(train_sample, validation_sample, 
+    output_caret <- results.caret(train_data = train_sample, validation_data = validation_sample, 
                                   samplingtype = NULL)
 
     # evaluate samples analyzed with caret with upsampling
-    output_caret_upsampling <- results.caret(train_sample, validation_sample, 
+    output_caret_upsampling <- results.caret(train_data = train_sample, validation_data = validation_sample, 
                                              samplingtype = "up")
  
 

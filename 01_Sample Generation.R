@@ -2,18 +2,18 @@
 
 ##### Load neccessary packages #####
 library(clusterGeneration) # used to create random correlation matrix for noise variables
-
+library(Matrix)
 # set directory to folder containing necessary scripts
-directory_script <- "C:/Users/Frauke/Desktop/Masterarbeit/Code"
+directory_script <- getwd()
 
 # Load R-script containing setup for data visualization
-source(paste0(directory_script, "/Functions Sample Generation.R"))
+source(paste0(directory_script, "/01a_Functions Sample Generation.R"))
 
 
 ##### Data preparation #####
 
 # Read in table containing different combinations of simulation factors
-condition_table <- as.data.frame(read.csv2("Conditions_final.csv", header = TRUE))
+condition_table <- as.data.frame(read.csv("Conditions_test.csv", header = TRUE))
 
 # create random correlation matrix for all variables
 set.seed(123)
@@ -23,7 +23,7 @@ correlation_mat <- rcorrmatrix(33)
 colnames(correlation_mat) <- rownames(correlation_mat) <-    
   c(paste0("X", 1:33))
 
- nloop = 1000 # set the number of iterations for the sample draw
+ nloop = 10 # set the number of iterations for the sample draw
 
 # save random correlation matrix
  
@@ -105,8 +105,7 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
                                               model_x)
     print(seed_sample)
     # return both samples in a list
-    samples <- list(train_values, validation_values)
-    names(samples) <- c("train", "validation")
+    samples <- list(train = train_values, validation = validation_values)
     return(samples)
   })
   return(condition_samples)
@@ -114,13 +113,13 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
 
 # save the samples in rda files
 saveRDS(sample_generation, file = "samples_total.rdata")
-
-saveRDS(sample_generation[1:16], file = "samples_nnoise_5.rdata")
-
-saveRDS(sample_generation[17:32], file = "samples_nnoise_10.rdata")
-
-saveRDS(sample_generation[33:48], file = "samples_nnoise_20.rdata")
-
-saveRDS(sample_generation[49:64], file = "samples_nnoise_30.rdata")
+# 
+# saveRDS(sample_generation[1:16], file = "samples_nnoise_5.rdata")
+# 
+# saveRDS(sample_generation[17:32], file = "samples_nnoise_10.rdata")
+# 
+# saveRDS(sample_generation[33:48], file = "samples_nnoise_20.rdata")
+# 
+# saveRDS(sample_generation[49:64], file = "samples_nnoise_30.rdata")
 
 
