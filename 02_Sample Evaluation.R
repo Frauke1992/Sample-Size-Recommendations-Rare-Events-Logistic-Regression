@@ -22,9 +22,9 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(10, 
+  clust <- makeCluster(5, 
                        type = "FORK", 
-                       outfile = paste0(logFolder, "/Dateien/evaluationDataStatus", 
+                       outfile = paste0(logFolder, "evaluationDataStatus", 
                                         Sys.Date(),".txt"))
 
   # set seed that works for parallel processing
@@ -54,9 +54,9 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
     output_results<-c(output_caret, 
                       output_caret_upsampling)
     # change the names for the output
-    names(output_results) <- c("LogReg","ElasticNetRoc","ElasticNetLogloss",
+    names(output_results) <- c("LogReg","ElasticNetRoc","ElasticNetLogloss", "GBMRoc", "GBMLogloss", 
                                "UpsamplingLogReg", "UpsamplingElasticNetRoc", 
-                               "UpsamplingElasticNetLogloss")
+                               "UpsamplingElasticNetLogloss", "UpsamplingGBMRoc", "UpsamplingGBMLogloss")
 
     print(paste0(loop_counter, " iterations done", "       Time: ", Sys.time()))
     gc()
