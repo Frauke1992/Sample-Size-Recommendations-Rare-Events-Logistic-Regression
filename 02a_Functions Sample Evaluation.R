@@ -188,9 +188,11 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
     auc_train_enet <- subset(fit_enet$results,
                              alpha== fit_enet$bestTune$alpha &
                                lambda == fit_enet$bestTune$lambda)$ROC
+    bestModel_lines <- apply(fit_enet$pred[,c("alpha","lambda")], 1, function(x){all(x == fit_enet$bestTune)})
+    
     # calculate logloss
-    logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs, 
-                                        fit_enet$pred[c( "ZERO", "ONE")])
+    logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs[bestModel_lines],
+                                        fit_enet$pred[bestModel_lines, c( "ZERO", "ONE")])
     logloss_train_enet <- NA
     
     
@@ -199,13 +201,16 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
     logloss_train_enet <- subset(fit_enet$results,
                                  alpha== fit_enet$bestTune$alpha &
                                    lambda == fit_enet$bestTune$lambda)$logLoss
+  
+    
+    bestModel_lines <- apply(fit_enet$pred[,c("alpha","lambda")], 1, function(x){all(x == fit_enet$bestTune)})
+    
     # calculate logloss
-    logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs, 
-                                        fit_enet$pred[c( "ZERO", "ONE")])
+    logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs[bestModel_lines],
+                                        fit_enet$pred[bestModel_lines, c( "ZERO", "ONE")])
     # calculate AUC
     auc_train_enet <- auc(train_data$Y, predicted_prob_train_enet)
   }
-  
   
   # calculate misclassification error
   misclassification_train_enet <- mean(predicted_class_train_enet != 
@@ -355,11 +360,11 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
     
     
     
-    # calculate logloss #ich frag mich ob hier noch n Logikfehler ist, da das hier ja mit allen
-    #berechnet wird und nicht nur mit dem subset des besten grids?
+    # calculate logloss 
+    bestModel_lines <- apply(fit_gbm$pred[,c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1, function(x){all(x == fit_gbm$bestTune)})
+    logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs[bestModel_lines],
+                                        fit_gbm$pred[bestModel_lines, c( "ZERO", "ONE")])
     
-    logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs,
-                                       fit_gbm$pred[c( "ZERO", "ONE")])
     logloss_train_gbm <- NA
     
     
@@ -370,9 +375,11 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                                   interaction.depth == fit_gbm$bestTune$interaction.depth &
                                   shrinkage == fit_gbm$bestTune$shrinkage &
                                   n.minobsinnode == fit_gbm$bestTune$n.minobsinnode)$logLoss
-    # calculate logloss
-    logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs,
-                                       fit_gbm$pred[c( "ZERO", "ONE")])
+    # calculate logloss 
+    bestModel_lines <- apply(fit_gbm$pred[,c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1, function(x){all(x == fit_gbm$bestTune)})
+    logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs[bestModel_lines],
+                                       fit_gbm$pred[bestModel_lines, c( "ZERO", "ONE")])
+    
     # calculate AUC
     auc_train_gbm <- auc(train_data$Y, predicted_prob_train_gbm)
   }
