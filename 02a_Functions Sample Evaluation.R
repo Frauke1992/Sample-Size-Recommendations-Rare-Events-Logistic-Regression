@@ -24,6 +24,7 @@ output.glm <- function(train_data, validation_data, upsampling){
                                       # saved along with prediction values
                                       savePredictions = TRUE, # all prediction values are saved
                                       returnData = TRUE, # saves the data
+                                      verboseIter = FALSE, # no output during training
                                       # Summary function that computes sensitivity, 
                                       # specificity and area under ROC curve
                                       summaryFunction = twoClassSummary, 
@@ -160,6 +161,7 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
                     method = "glmnet", 
                     # dichotomous outcomes, family selects logistic regression
                     family = "binomial", 
+                    verbose = FALSE,
                     metric = metrictype,# specified performance metric
                     tuneLength = 20) # set tunelength to 20
   
@@ -306,10 +308,9 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                                    number = 10,
                                    # class probabilities are computed and saved
                                    classProbs = TRUE,
-                                   # do not tell me everything about every iteration...
-                                   verboseIter = FALSE,
                                    # all prediction values are saved
                                    savePredictions = TRUE,
+                                   verboseIter = FALSE, # no output during training
                                    returnData = TRUE, # saves the data
                                    # specified summarytype given to the function
                                    summaryFunction = summarytype,
@@ -323,6 +324,7 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                    # trainControl object containing the specifications above
                    trControl = trainControl_gbm,
                    method = "gbm",
+                   verbose = FALSE,
                    metric = metrictype,# specified performance metric
                    tuneGrid = grid_gbm) # set tunelength to 20
   
@@ -352,8 +354,10 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                               n.minobsinnode == fit_gbm$bestTune$n.minobsinnode)$ROC
     
     
+    
     # calculate logloss #ich frag mich ob hier noch n Logikfehler ist, da das hier ja mit allen
     #berechnet wird und nicht nur mit dem subset des besten grids?
+    
     logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs,
                                        fit_gbm$pred[c( "ZERO", "ONE")])
     logloss_train_gbm <- NA
@@ -603,9 +607,32 @@ results.caret <- function(train_data, validation_data, samplingtype){
     # stop the loop in case of an unexpected, not yet defined error
     stop("Unerwarteter Fehler ENET")
   }
+  ### GBM ###
+  gbm_output_roc <- try({
+    output.gbm(train_data, validation_data, samplingtype,
+               summarytype=twoClassSummary, metrictype="ROC")
+  }, silent = TRUE)
   
-  results<-list(glm_output , enet_output_roc, enet_output_logloss)
-  names(results) <- c("LogReg" , "ElasticNetRoc", "ElasticNetLogloss")
+  # if an error occured
+  if(class(gbm_output_roc)[1] == "try-error"){
+    # stop the loop in case of an unexpected, not yet defined error
+    stop("Unerwarteter Fehler gbm")
+  }
+  
+  gbm_output_logloss <- try({
+    output.gbm(train_data, validation_data, samplingtype,
+               metrictype = "logLoss", summarytype = mnLogLoss)
+  }, silent = TRUE)
+  # if an error occured
+  if(class(gbm_output_logloss)[1] == "try-error"){
+    # stop the loop in case of an unexpected, not yet defined error
+    stop("Unerwarteter Fehler gbm")
+  }
+  
+  results<-list(glm_output , enet_output_roc, enet_output_logloss, 
+                gbm_output_roc, gbm_output_logloss)
+  names(results) <- c("LogReg" , "ElasticNetRoc", "ElasticNetLogloss", 
+                      "GBMRoc", "GBMLogloss")
   return(results)
   
 }
