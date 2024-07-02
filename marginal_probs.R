@@ -5,57 +5,65 @@
 
 library(clusterGeneration)
 
+
+
 # Step 1: Construct correlation matrix of the predictors -----------------------
 
-nnoise <- 10 # use 10 irrelevant predictors
-corMatrix <- rcorrmatrix(3+nnoise)
+nnoise <- 0 # use 0 irrelevant predictors
+corMatrix <- rcorrmatrix(3 + nnoise)
 
 corMatrix[1,2] <- corMatrix[2,1] <- corMatrix[1,3] <- corMatrix[3,1] <- 0.1
 corMatrix[2,3] <- corMatrix[3,2] <- 0.5
+corMatrix
 
-min(eigen(corMatrix)$values)
-
-corMatrix <- Matrix::nearPD(corMatrix, corr = TRUE)$mat
-
-min(eigen(corMatrix)$values)
-
-corMatrix[1:3, 1:3] # correlations of the relevant predictors - attenuated slightly
+# legacy code to ensure positive definiteness of the correlation matrix
+# min(eigen(corMatrix)$values)
+# corMatrix <- Matrix::nearPD(corMatrix, corr = TRUE)$mat
+# min(eigen(corMatrix)$values)
+# corMatrix[1:3, 1:3] # correlations of the relevant predictors - attenuated slightly
 
 
 # Step 2: Generate Predictor Values --------------------------------------------
 
 n <- 1000 # sample size
-
-X <- mvtnorm::rmvnorm(n, sigma = matrix(corMatrix@x, nrow = 3+nnoise))
-
+X <- mvtnorm::rmvnorm(n, sigma = corMatrix)
 X <- as.data.frame(X)
+X <- model.matrix(~V1*V2*V3-(V1:V2:V3), data = X)
 
 # Step 3: Generate Outcome -----------------------------------------------------
 
-efrac <- 0.005 # event fraction
-BETA0 <- log(efrac/(1-efrac))
+BETA0 <- seq(20,-20, length.out = 100000) # potential intercepts
 
-BETA <- c(BETA0, rep(log(1.6), 6)) # beta coefficients
+marginal_probs <- sapply(BETA0, function(iB0){
+  
+  BETA <- c(iB0, rep(c(1.5,	log(2.5),	log(4)),2)) # beta coefficients
+  eta <- X %*% BETA
+  prob <- 1/(1+exp(-eta))
+  
+  mean(prob)
+  
+}, simplify = "array")
 
-eta <- BETA[1] + BETA[2]*X$V1 + BETA[3]*X$V2 + BETA[4]*X$V3 + BETA[5]*X$V1*X$V2 + BETA[6]*X$V1*X$V3 + BETA[7]*X$V2*X$V3
+plot(BETA0, marginal_probs, type = "l", xlab = "Intercept", 
+     ylab = "Marginal Probability", col = "blue", lwd = 2)
 
-# let's look at eta:
+# Step 4: Find intercepts for marginal probabilities ---------------------------
+plot(marginal_probs, BETA0, type = "l", xlab = "Marginal Probability", 
+     ylab = "Intercept", col = "blue", lwd = 2)
 
-summary(eta) # mean is larger than BETA0
-# (due to the positive correlation of the predictors, the means of the product terms are > 0)
+chosen_intercepts <- approx(marginal_probs, BETA0, xout = c(0.5, 0.1, 0.05, 0.01, 0.005))
+chosen_intercepts$y
 
-hist(eta) # distribution is skewed and has a rather long tail
-# arises from the combination of positively correlated predictors with positive (interaction) effects
 
-# transform eta to probability:
+# Step 5: Final check ----------------------------------------------------------
 
-prob <- 1/(1+exp(-eta))
+sapply(chosen_intercepts$y, function(iB0){
+  
+  BETA <- c(iB0, rep(c(1.5,	log(2.5),	log(4)),2)) # beta coefficients
+  eta <- X %*% BETA
+  prob <- 1/(1+exp(-eta))
+  sim_dat <- rbinom(n = 100000, size = 1, prob = prob)
 
-summary(prob)
-
-hist(prob) # the long tail in eta translates to probabilities ranging from 0-1
-
-# draw observations:
-
-y <- rbinom(n, 1, prob)
-mean(y)
+  c(mean(prob), mean(sim_dat))
+  
+}, simplify = "array")
