@@ -18,115 +18,28 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   # and handle those errors
   if (class(glm_output)[1] == "try-error"){  # if there is an error
     errmessage <- geterrmessage() # get the error message
-    # if the error is that the model didn't converge
-    if(grepl("did not converge", errmessage)){ 
-      options(warn = -1) # turn off warnings
-      # run the function again without the warnings
-      glm_output <- try({output.glm(train_data, validation_data, 
-                                    upsampling = samplingtype)}, silent = TRUE)
-      if(class(glm_output)[1] == "try-error"){  # if there is again an error
-        new_error_message <- geterrmessage()
-        if(grepl("data must contain some levels that overlap the reference", 
-                 new_error_message)){
-          glm_output <- new_error_message # saves the error message
-          names(glm_output) <- "Error!"
-          print(paste0("Error after non-convergence in iteration ", loop_counter ,"! ",
-                       new_error_message))
-        } else {
-          stop(paste0("Unerwarteter Fehler GLM after non-convergence in iteration ", 
-                      loop_counter, ": ", errmessage))
-        }
-      } else {
-        glm_output <- append(glm_output, paste("Warnung: ", errmessage), 
-                             after = 0) # save the warning on top of the output
-        names(glm_output)[1] <- "Non-Convergence!"
-      }
-      
-    }  else if(grepl("adjusted probabilities", errmessage)){  # if the error was 
-      # originally a  warning 
-      # about fitted probabilities 
-      # close to 1 or 0
-      options(warn = -1) # turn off warnings
-      # run the function again without the warnings
-      glm_output <- try({output.glm(train_data, validation_data, 
-                                    upsampling = samplingtype)}, silent = TRUE)
-      if(class(glm_output)[1] == "try-error"){  # if there is again an error
-        new_error_message <- geterrmessage()
-        if(grepl("data must contain some levels that overlap the reference", 
-                 new_error_message)){
-          glm_output <- new_error_message # saves the error message
-          names(glm_output) <- "Error!"
-          print(paste0("Error after adjusted probs in iteration ", loop_counter ,"! ",
-                       new_error_message))
-        } else {
-          stop(paste0("Unerwarteter Fehler GLM after adjusted probs in iteration ", 
-                      loop_counter, ": ", errmessage))
-        }
-      } else {
-        glm_output <- append(glm_output, paste("Warnung: ", errmessage), 
-                             after = 0) # save the warning on top of the output
-        names(glm_output)[1] <- "Separation!"
-      }
-      
-      
-    }  else if(grepl("fitted probabilities", errmessage)){ # if the error was 
-      # originally a  warning 
-      # about fitted probabilities 
-      # close to 1 or 0
-      options(warn = -1) # turn off warnings
-      # run the function again without the warnings
-      glm_output <- try({output.glm(train_data, validation_data, 
-                                    upsampling = samplingtype)}, silent = TRUE) 
-      if(class(glm_output)[1] == "try-error"){  # if there is again an error
-        new_error_message <- geterrmessage()
-        if(grepl("data must contain some levels that overlap the reference", 
-                 new_error_message)){
-          glm_output <- new_error_message # saves the error message
-          names(glm_output) <- "Error!"
-          print(paste0("Error after fitted probs in iteration ", loop_counter ,"! ", 
-                       new_error_message))
-        } else {
-          stop(paste0("Unerwarteter Fehler GLM after fitted probs in iteration ", 
-                      loop_counter, ": ", errmessage))
-        }
-      } else {
-        glm_output <- append(glm_output, paste("Warnung: ", errmessage), 
-                             after = 0) # save the warning on top of the output
-        names(glm_output)[1] <- "Separation!"
-      }
-      
-    } else if(grepl("rank-deficient fit", errmessage)){   
-      # if the error was originally a  warning about a prediction from rank-deficient fit
-      options(warn = -1) # turn off warnings
-      # run the function again without the warnings
-      glm_output <- try({output.glm(train_data, validation_data, 
-                                    upsampling = samplingtype)}, silent = TRUE)
-      
-      if(class(glm_output)[1] == "try-error"){  # if there is again an error
-        new_error_message <- geterrmessage()
-        if(grepl("data must contain some levels that overlap the reference", 
-                 new_error_message)){
-          glm_output <- new_error_message # saves the error message
-          names(glm_output) <- "Error!"
-          print(paste0("Error after rank-deficient fit in iteration ", 
-                       loop_counter ,"! ", new_error_message))
-        } else {
-          stop(paste0("Unerwarteter Fehler GLM after rank-deficient fit in iteration ", 
-                      loop_counter, ": ", errmessage))
-        }
-      } else {
-        glm_output <- append(glm_output, paste("Warnung: ", errmessage), 
-                             after = 0) # save the warning on top of the output
-        names(glm_output)[1] <- "Rank-Deficient Fit!"
-      }
-      
-      
-    }
-    else{
-      # stop the loop in case of an unexpected, not yet defined error
-      stop(paste0("Unerwarteter Fehler GLM in iteration ", loop_counter, ": ", 
-                  errmessage))} 
+    
+    options(warn = -1) # turn off warnings
+    # run the function again without the warnings
+    glm_output <- try({output.glm(train_data, validation_data, 
+                                  upsampling = samplingtype, model = oracle_model)}, silent = TRUE)
+    
+    # We adapt the SAS criterion to detect separation
+    # https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/statug/statug_logistic_details10.htm
+    # That is, we declare separation if fitted probabilities = 0/1 occur 
+    # AND if any of the standard errors of the coefficients are >= 70
+    # this is valid because we simulated standardized predictor variables
+    glm_output$fitted_probs <- grepl("glm.fit: fitted probabilities numerically 0 or 1 occurred", errmessage)
+    glm_output$large_SEs <- any(glm_output$coefficients[-1, "Std. Error"] >= 70)
+    glm_output$separation <- glm_output$fitted_probs & glm_output$large_SEs                        
+    glm_output$errmessage <- errmessage
+    
+  } else {
+    
+    glm_output$errmessage <- errmessage
+    glm_output$fitted_probs <- glm_output$large_SEs <- glm_output$separation <- FALSE
   }
+  
   # turn off conversion of warning messages into error messages
   options(warn = 0) 
   
