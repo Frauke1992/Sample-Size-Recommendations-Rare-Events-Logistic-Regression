@@ -70,7 +70,7 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
   model_equation <- as.character(conditions[6]) 
   # change the model formula into the needed format for glmnet and model.matrix
   model_x <- terms(formula(gsub('Y', '', conditions[6]))) 
-  
+  model_formula <- formula(gsub('Y', '', conditions[6]))
   
   ##### Set current correlation matrix ####
   # number of potential predictors
@@ -105,7 +105,7 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
                                               model_x)
     print(seed_sample)
     # return both samples in a list
-    samples <- list(train = train_values, validation = validation_values)
+    samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
   })
   return(condition_samples)

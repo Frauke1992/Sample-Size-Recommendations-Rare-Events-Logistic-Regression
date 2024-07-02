@@ -8,6 +8,7 @@ directory_script <- getwd()
 
 # Load R-script containing setup for data visualization
 source(paste0(directory_script, "/02a_Functions Sample Evaluation.R"))
+source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 
 
 
@@ -43,7 +44,7 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
     validation_sample <- current_sample[[2]] 
     # evaluate samples analyzed with caret without upsampling
     output_caret <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                  samplingtype = NULL)
+                                  samplingtype = NULL, oracle_model = current_sample$oracle_model)
 
     # evaluate samples analyzed with caret with upsampling
     output_caret_upsampling <- results.caret(train_data = train_sample, validation_data = validation_sample, 
