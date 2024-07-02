@@ -38,7 +38,6 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 - labels in figures need to be adapted when the conditions are changed
 
 ## To-DO @Florian 
-- detect separation by fitted probs 0/1 AND invalid standard errors
 - Effektstärken an Kristins Metaanalyse verankern
 - anvisierte marginal probs: 0.5, 0.1, 0.05, 0.01, 0.005
 - do a test run and check the separation criterion, is this criterion too conservative and does it behave better in large samples?

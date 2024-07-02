@@ -1,3 +1,8 @@
+### TO-DO Document this script.
+### GOAL: plan data generating model parameters in order to achieve a certain event fraction
+### We aim at marginal probs: 0.5, 0.1, 0.05, 0.01, 0.005
+### maximal OR for large effects is 4 based on http://dx.doi.org/10.1037/bul0000084 (p. 210, Tab 4)
+
 library(clusterGeneration)
 
 # Step 1: Construct correlation matrix of the predictors -----------------------
