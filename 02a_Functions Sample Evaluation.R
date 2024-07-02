@@ -9,7 +9,7 @@ library(gbm) # for gradient boosting machine
 ####################################################
 ###### Function for LR without regularization ######
 ####################################################
-output.glm <- function(train_data, validation_data, upsampling){
+output.glm <- function(train_data, validation_data, upsampling, model = NULL){
   # change y to factor
   train_data_caret <- train_data
   train_data_caret$Y <- as.factor(train_data_caret$Y)
@@ -30,10 +30,14 @@ output.glm <- function(train_data, validation_data, upsampling){
                                       summaryFunction = twoClassSummary, 
                                       # upsampling to resolve class imbalance or none
                                       sampling = upsampling)
+
+  if(is.null(model)){
+    model <- Y ~ (. + .)^2
+  } 
   
   
   # train model
-  fit_normal <- train(form = Y ~ (. + .)^2, 
+  fit_normal <- train(form = model, 
                       # any given x and its two-way interactions with other 
                       # potential predictors can go into the model
                       data = train_data_caret,
@@ -49,9 +53,8 @@ output.glm <- function(train_data, validation_data, upsampling){
   #### Analysis of training data ####
   # extract coefficients of the fitted logistic regression model
   
-  coeff_normal <- matrix(data= c(coef(summary(fit_normal))[, 1], 
-                                 coef(summary(fit_normal))[,4]),
-                         ncol=2)
+  coeff_normal <- coef(summary(fit_normal))
+  
   # calculate predicted probabilities in training sample
   predicted_prob_train <- predict(fit_normal, train_data[-1], 
                                   type = "prob")

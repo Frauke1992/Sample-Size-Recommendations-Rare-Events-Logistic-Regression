@@ -30,17 +30,16 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 ## Known issues
 - out of memory in parallel evaluation, especially for large samples and many noise variables (potentially do not read in all samples at once, but if you do this, you need to change how the generated samples are stored)
 - output of logfile not fully helpful due to parallelization
-- function names are not updated to the numbered git version
 - marginal vs. conditional probability  (intercept for lower marginal prev: -7.373546)
 - how can we reliably detect separation? (must already be changed in 02a -> line 373 (this is not necessarily separation! predicted probabilities close to 1 are not the same as separation) possibly, this needs to be changed in the glm-fitting function already
-- @Kristin: nochmal die glm und enet Sachen in caret stimmen inkl. upsamling
 - 02a: changing the marginal probability will create new errors because some metrics cannot be computed and there are often less than 8 observations with class = 1
 - in 03a: adapt how errrors are counted in the new version
 - 03a: predictors receive NA either when they are non-significant OR if log Reg has failed (then all are NA)
 - labels in figures need to be adapted when the conditions are changed
 
-## Changes
-- logistische Regression in der jetzigen Form rauslöschen -> ersetzen die durch eine logistische Regression, (oracle) mit nur den wahren Prädiktoren und deren Interaktion (Was ist mit der Separation? detectseparation @Katrin) @Florian 
-- Ergänzung eines gbm @Kristin
+## To-DO @Florian 
+- detect separation by fitted probs 0/1 AND invalid standard errors
 - Effektstärken an Kristins Metaanalyse verankern
 - anvisierte marginal probs: 0.5, 0.1, 0.05, 0.01, 0.005
+- do a test run
+- was ist mit den Falsch-Positiven bei der LogReg, ist uns das egal?
