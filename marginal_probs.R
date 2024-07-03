@@ -36,7 +36,7 @@ BETA0 <- seq(20,-20, length.out = 100000) # potential intercepts
 
 marginal_probs <- sapply(BETA0, function(iB0){
   
-  BETA <- c(iB0, rep(c(1.5,	log(2.5),	log(4)),2)) # beta coefficients
+  BETA <- c(iB0, rep(c(log(1.5),	log(2.5),	log(4)),2)) # beta coefficients
   eta <- X %*% BETA
   prob <- 1/(1+exp(-eta))
   
@@ -59,7 +59,7 @@ chosen_intercepts$y
 
 sapply(chosen_intercepts$y, function(iB0){
   
-  BETA <- c(iB0, rep(c(1.5,	log(2.5),	log(4)),2)) # beta coefficients
+  BETA <- c(iB0, rep(c(log(1.5),	log(2.5),	log(4)),2)) # beta coefficients
   eta <- X %*% BETA
   prob <- 1/(1+exp(-eta))
   sim_dat <- rbinom(n = 100000, size = 1, prob = prob)
