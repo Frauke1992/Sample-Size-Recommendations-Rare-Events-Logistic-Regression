@@ -38,6 +38,7 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 - labels in figures need to be adapted when the conditions are changed
 
 ## To-DO @Florian 
+- generate the masterfile from a script, delete the correlations from this file!
 - do a test run and check the separation criterion, is this criterion too conservative and does it behave better in large samples?
-- was ist mit den Falsch-Positiven bei der LogReg, ist uns das egal?
+
 

@@ -15,20 +15,12 @@ source(paste0(directory_script, "/01a_Functions Sample Generation.R"))
 # Read in table containing different combinations of simulation factors
 condition_table <- as.data.frame(read.csv("Conditions_test.csv", header = TRUE))
 
-# create random correlation matrix for all variables
-set.seed(123)
-correlation_mat <- rcorrmatrix(33)
+source("01b_generate_predictor_corr.R")
 
-# set row and column names for the correlation matrix
-colnames(correlation_mat) <- rownames(correlation_mat) <-    
-  c(paste0("X", 1:33))
 
- nloop = 10 # set the number of iterations for the sample draw
-
-# save random correlation matrix
  
 ###############################
-
+nloop <- 10 # number of samples for each condition
 seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
@@ -76,13 +68,8 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
   # number of potential predictors
   n_variables <- n_noise_variables + n_predictors 
   
-  current_correlation_mat <- correlation_mat[1:n_variables, 1:n_variables]
-  # replace the first part of the matrix with the provided correlations of the actual predictors
-  current_correlation_mat[1:n_predictors, 1:n_predictors] <- correlation_x
-  # add small values to the diagonal to prevent issues with eigenvalues
-  current_correlation_mat <- nearPD(current_correlation_mat, corr = TRUE, keepDiag = TRUE)
-  current_correlation_mat <- as.matrix(current_correlation_mat$mat)
-  
+  current_correlation_mat <- full_correlation_mat[1:n_variables, 1:n_variables]
+
   
   ##### Sample generation #####
   # lapply-loop to generate the samples for the current condition and save them in a nested list
