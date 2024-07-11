@@ -8,61 +8,38 @@ directory_script <- getwd()
 
 # Load R-script containing setup for data visualization
 source(paste0(directory_script, "/01a_Functions Sample Generation.R"))
+source("00a_generate_predictor_corr.R")
 
 
 ##### Data preparation #####
 
 # Read in table containing different combinations of simulation factors
-condition_table <- as.data.frame(read.csv("Conditions_test.csv", header = TRUE))
-
-source("01b_generate_predictor_corr.R")
+condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
 
 
- 
 ###############################
 nloop <- 10 # number of samples for each condition
 seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
 ##### Loop to go through different conditions in condition_table #####
-sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(conditions){
+sample_generation <- sapply(1:nrow(condition_table), FUN = function(i_condition){
+  conditions <- condition_table[i_condition,]
   options(warn = 0)
   ##### Extracting information: Get information for current condition #####
   # sample size
-  n_sample <- as.double(conditions[1])
-  # number of actual predictors
-  n_predictors <- as.double(conditions[2]) 
-  # number of interactions between predictors
-  n_interactions <- as.double(conditions[3]) 
-  # calculate number of correlations that need to be provided
-  n_correlations <- n_predictors*(n_predictors - 1)/2 
-  # calculate number of betas that need to be provided
-  n_beta <- n_predictors + n_interactions+1 
-  # number of noise variables
-  n_noise_variables <- as.double(conditions[4]) 
-  # number of columns in table before correlations are given
-  first_col_corr <- as.double (conditions[5]) 
-  # get the correlations for the actual predictors
-  correlation_x <- as.double(c(conditions[(first_col_corr) :
-                                            (n_correlations + 
-                                               first_col_corr-1)])) 
-  # make the class of the correlations object into a symmetric distance matrix
-  class(correlation_x) <- 'dist' 
-  # givs the number of predictors as size for the correlations object
-  attr(correlation_x, 'Size') <- n_predictors 
-  # make matrix with correlations
-  correlation_x <- as.matrix(correlation_x) 
-  # add the diagonal with ones for the matrix (correlation of a predictor with itself)
-  diag(correlation_x) <- 1 
+  n_sample <- conditions$sample_size
+    # number of noise variables
+  n_noise_variables <- conditions$n_noise_variables 
   # get the betas for the predictors and interactions
-  beta_vector <- c(as.double(conditions[(n_correlations + first_col_corr) :
-                                          (n_correlations + n_beta + 
-                                             first_col_corr-1)])) 
+  beta_vector <- c(conditions$intercept, unlist(conditions[1,grepl("b_", names(conditions))]))
+
+  
   # get the model formula from the table
-  model_equation <- as.character(conditions[6]) 
+  model_equation <- conditions$model 
   # change the model formula into the needed format for glmnet and model.matrix
-  model_x <- terms(formula(gsub('Y', '', conditions[6]))) 
-  model_formula <- as.formula(paste0("Y",gsub('Y', '', conditions[6])))
+  model_x <- terms(formula(gsub('Y', '', model_equation))) 
+  model_formula <- as.formula(paste0("Y",gsub('Y', '', model_equation)))
   
   ##### Set current correlation matrix ####
   # number of potential predictors
@@ -86,7 +63,7 @@ sample_generation <- apply(condition_table, MARGIN = 1, FUN = function(condition
     set.seed(seed_validation)
     # generate a validation sample that is half the size of the training sample with 
     # the same conditions for the sample generation
-    validation_values <- generate.random.data(n_sample / 2, 
+    validation_values <- generate.random.data(n_sample, 
                                               beta_vector, 
                                               current_correlation_mat, 
                                               model_x)

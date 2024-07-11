@@ -6,6 +6,7 @@
 set.seed(123)
 
 # draw a large random correlation matrix including the maximum number of predictors and noise variables
+n_predictors <- 3
 correlation_mat <- rcorrmatrix(33)
 
 # set row and column names for the correlation matrix

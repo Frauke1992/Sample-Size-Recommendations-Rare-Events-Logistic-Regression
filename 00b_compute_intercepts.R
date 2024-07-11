@@ -13,14 +13,11 @@ get_intercepts <- function(n = 1000, corMatrix = NULL){
   
   # Step 3: Generate Outcome -----------------------------------------------------
   
-  BETA0 <- seq(20,-20, length.out = 1000000) # potential intercepts
+  BETA0 <- seq(2,-20, length.out = 1000000) # potential intercepts
   
   
-  myCL <- makeForkCluster(10)
-  
-  # clusterExport(myCL, "X")
-  
-  marginal_probs <- parSapply(myCL, BETA0, function(iB0){
+
+  marginal_probs <- sapply(BETA0, function(iB0){
     
     BETA <- c(iB0, rep(c(log(1.5),	log(2.5),	log(4)),2)) # beta coefficients
     eta <- X %*% BETA
@@ -30,12 +27,10 @@ get_intercepts <- function(n = 1000, corMatrix = NULL){
     
   }, simplify = "array")
   
-  stopCluster(myCL)
-  
   chosen_intercepts <- approx(marginal_probs, BETA0, xout = c(0.5, 0.1, 0.05, 0.01, 0.005))
-  
-  
-  return(chosen_intercepts$y)
+
+  out_list <- list(chosen_intercepts$y, beta_weights = rep(c(log(1.5),	log(2.5),	log(4)),2))
+  return(out_list)
   
 }
 
@@ -43,8 +38,11 @@ get_intercepts <- function(n = 1000, corMatrix = NULL){
 # this is a sanity check showing that the computed intercepts do not 
 # vary depending on the number of irrelevant predictors
 
-get_intercepts(n = 10000, corMatrix = full_correlation_mat[1:8,1:8])
+(b0_5noise <- get_intercepts(n = 1000000, corMatrix = full_correlation_mat[1:8,1:8]))
 # [1]  -0.2828419  -5.0714385  -7.2546937 -12.5384392 -14.8572436
 
-get_intercepts(n = 10000, corMatrix = full_correlation_mat)
+(b0_30noise <- get_intercepts(n = 1000000, corMatrix = full_correlation_mat))
 # [1]  -0.2537262  -5.0727858  -7.1989813 -12.5159021 -14.7479046
+
+
+save(list = ls(), file = "intercepts_and_weights.RData")
