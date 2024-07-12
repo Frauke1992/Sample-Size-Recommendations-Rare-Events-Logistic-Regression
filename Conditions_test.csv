@@ -1,2 +1,0 @@
-N,Predictors,Interactions,noiseVariables,firstColumnWithCorrelation,Model,CorrelationX1,X2,Correlation X1X3,Correlation X2X3,Beta0,Beta1,Beta2,Beta3,Beta4,Beta5,Beta6
-100,3,3,5,7,Y~X1*X2*X3-(X1:X2:X3),0.5,0.1,0.1,-2.944438979,7,1.029619417,1.609437912,0.470003629,1.029619417,1.609437912,

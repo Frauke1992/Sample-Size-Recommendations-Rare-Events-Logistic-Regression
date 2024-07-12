@@ -23,7 +23,7 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(5, 
+  clust <- makeCluster(8, 
                        type = "FORK", 
                        outfile = paste0(logFolder, "evaluationDataStatus", 
                                         Sys.Date(),".txt"))
@@ -39,9 +39,9 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
     loop_counter <<- loop_counter + 1
     gc()
     # save the first sample of the list as the training sample
-    train_sample <- current_sample[[1]] 
+    train_sample <- current_sample$train 
     # save the second sample of the list as the validation sample
-    validation_sample <- current_sample[[2]] 
+    validation_sample <- current_sample$validation 
     # evaluate samples analyzed with caret without upsampling
     output_caret <- results.caret(train_data = train_sample, validation_data = validation_sample, 
                                   samplingtype = NULL, oracle_model = current_sample$oracle_model)

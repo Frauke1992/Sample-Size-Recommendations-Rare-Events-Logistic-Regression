@@ -23,7 +23,7 @@ seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
 ##### Loop to go through different conditions in condition_table #####
-sample_generation <- sapply(1:nrow(condition_table), FUN = function(i_condition){
+sample_generation <- lapply(1:nrow(condition_table), FUN = function(i_condition){
   conditions <- condition_table[i_condition,]
   options(warn = 0)
   ##### Extracting information: Get information for current condition #####
@@ -77,13 +77,6 @@ sample_generation <- sapply(1:nrow(condition_table), FUN = function(i_condition)
 
 # save the samples in rda files
 saveRDS(sample_generation, file = "samples_total.rdata")
-# 
-# saveRDS(sample_generation[1:16], file = "samples_nnoise_5.rdata")
-# 
-# saveRDS(sample_generation[17:32], file = "samples_nnoise_10.rdata")
-# 
-# saveRDS(sample_generation[33:48], file = "samples_nnoise_20.rdata")
-# 
-# saveRDS(sample_generation[49:64], file = "samples_nnoise_30.rdata")
+
 
 
