@@ -23,7 +23,7 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(8, 
+  clust <- makeCluster(10, 
                        type = "FORK", 
                        outfile = paste0(logFolder, "evaluationDataStatus", 
                                         Sys.Date(),".txt"))
@@ -38,6 +38,7 @@ condition_evaluation <- lapply(total_samples, FUN = function(generated_samples){
   evaluation_samples = parLapply(clust, generated_samples, fun = function(current_sample){
     loop_counter <<- loop_counter + 1
     gc()
+
     # save the first sample of the list as the training sample
     train_sample <- current_sample$train 
     # save the second sample of the list as the validation sample

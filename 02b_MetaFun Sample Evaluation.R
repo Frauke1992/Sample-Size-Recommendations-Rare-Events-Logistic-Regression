@@ -42,6 +42,8 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   
   # turn off conversion of warning messages into error messages
   options(warn = 0) 
+  # create an empty object for error messages
+  errmessage <- NA
   
   ### Elastic Net ###
   enet_output_roc <- try({
@@ -51,20 +53,23 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   
   # if an error occured
   if(class(enet_output_roc)[1] == "try-error"){
-    # stop the loop in case of an unexpected, not yet defined error
-    stop("Unerwarteter Fehler ENET")
+    errmessage <- geterrmessage() # get the error message
+    enet_output_roc$problem = TRUE
   }
-  
+  # create an empty object for error messages
+  errmessage <- NA
   enet_output_logloss <- try({
     output.enet(train_data, validation_data, samplingtype,
                 metrictype = "logLoss", summarytype = mnLogLoss)
   }, silent = TRUE)
   # if an error occured
   if(class(enet_output_logloss)[1] == "try-error"){
-    # stop the loop in case of an unexpected, not yet defined error
-    stop("Unerwarteter Fehler ENET")
+    errmessage <- geterrmessage() # get the error message
+    enet_output_logloss$problem = TRUE
   }
   ### GBM ###
+  # create an empty object for error messages
+  errmessage <- NA
   gbm_output_roc <- try({
     output.gbm(train_data, validation_data, samplingtype,
                summarytype=twoClassSummary, metrictype="ROC")
@@ -73,17 +78,19 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   # if an error occured
   if(class(gbm_output_roc)[1] == "try-error"){
     # stop the loop in case of an unexpected, not yet defined error
-    stop("Unerwarteter Fehler gbm")
+    errmessage <- geterrmessage() # get the error message
+    gbm_output_roc$problem = TRUE
   }
-  
+  # create an empty object for error messages
+  errmessage <- NA
   gbm_output_logloss <- try({
     output.gbm(train_data, validation_data, samplingtype,
                metrictype = "logLoss", summarytype = mnLogLoss)
   }, silent = TRUE)
   # if an error occured
   if(class(gbm_output_logloss)[1] == "try-error"){
-    # stop the loop in case of an unexpected, not yet defined error
-    stop("Unerwarteter Fehler gbm")
+    errmessage <- geterrmessage() # get the error message
+    gbm_output_logloss$problem = TRUE
   }
   
   results<-list(glm_output , enet_output_roc, enet_output_logloss, 
