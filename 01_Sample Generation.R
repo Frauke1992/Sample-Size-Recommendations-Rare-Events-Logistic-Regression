@@ -18,12 +18,12 @@ condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
 
 
 ###############################
-nloop <- 10 # number of samples for each condition
+nloop <- 100 # number of samples for each condition
 seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
 ##### Loop to go through different conditions in condition_table #####
-sample_generation <- lapply(1:nrow(condition_table), FUN = function(i_condition){
+all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
   conditions <- condition_table[i_condition,]
   options(warn = 0)
   ##### Extracting information: Get information for current condition #####
@@ -76,7 +76,7 @@ sample_generation <- lapply(1:nrow(condition_table), FUN = function(i_condition)
 })
 
 # save the samples in rda files
-saveRDS(sample_generation, file = "samples_total.rdata")
+save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
 
 
 
