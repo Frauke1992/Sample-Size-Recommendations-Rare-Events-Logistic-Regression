@@ -154,7 +154,8 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
                                     # specified summarytype given to the function
                                     summaryFunction = summarytype, 
                                     # upsampling to resolve class imbalance or none
-                                    sampling = upsampling) 
+                                    sampling = upsampling,
+                                    selectionFunction = "oneSE") 
   # train model for area under ROC curve
   fit_enet <- train(Y ~ (. + .)^2,# any given x and its two-way interactions with other 
                     # potential predictors can go into the model
@@ -323,7 +324,8 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
                                    # specified summarytype given to the function
                                    summaryFunction = summarytype,
                                    # upsampling to resolve class imbalance or none
-                                   sampling = upsampling)
+                                   sampling = upsampling,
+                                   selectionFunction = "oneSE")
   
   # train model for area under ROC curve
   fit_gbm <- train(Y ~ .,# any given x and its two-way interactions with other
