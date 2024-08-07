@@ -55,6 +55,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   if(class(enet_output_roc)[1] == "try-error"){
     errmessage <- geterrmessage() # get the error message
     enet_output_roc$problem = TRUE
+    enet_output_roc$errmessage <- errmessage
   }
   # create an empty object for error messages
   errmessage <- NA
@@ -66,6 +67,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   if(class(enet_output_logloss)[1] == "try-error"){
     errmessage <- geterrmessage() # get the error message
     enet_output_logloss$problem = TRUE
+    enet_output_logloss$errmessage <- errmessage
   }
   ### GBM ###
   # create an empty object for error messages
@@ -80,6 +82,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
     # stop the loop in case of an unexpected, not yet defined error
     errmessage <- geterrmessage() # get the error message
     gbm_output_roc$problem = TRUE
+    gbm_output_roc$errmessage <- errmessage
   }
   # create an empty object for error messages
   errmessage <- NA
@@ -91,6 +94,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   if(class(gbm_output_logloss)[1] == "try-error"){
     errmessage <- geterrmessage() # get the error message
     gbm_output_logloss$problem = TRUE
+    gbm_output_logloss$errmessage <- errmessage
   }
   
   results<-list(glm_output , enet_output_roc, enet_output_logloss, 

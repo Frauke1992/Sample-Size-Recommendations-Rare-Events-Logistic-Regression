@@ -72,20 +72,3 @@ condition_evaluation <- lapply(1:length(all_conditions), FUN = function(conditio
   return(condition_counter)
 })
 
-
-
-
-
-## gesammelte Fehler:
-# 
-# [1] "225 iterations done       Time: 2024-07-22 09:01:53.311637"
-# Something is wrong; all the ROC metric values are missing:
-#   ROC           Sens        Spec    
-# Min.   : NA   Min.   :1   Min.   : NA  
-# 1st Qu.: NA   1st Qu.:1   1st Qu.: NA  
-# Median : NA   Median :1   Median : NA  
-# Mean   :NaN   Mean   :1   Mean   :NaN  
-# 3rd Qu.: NA   3rd Qu.:1   3rd Qu.: NA  
-# Max.   : NA   Max.   :1   Max.   : NA  
-# NA's   :300               NA's   :300  
-# [1] "226 iterations done       Time: 2024-07-22 09:04:07.914677"
