@@ -14,11 +14,13 @@ source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 
 ####### Sample evaluation #######
 #load the samples
-load("samples_total.rdata")
-loop_counter <- 0
+# Read in table containing different combinations of simulation factors
+condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
 
-condition_evaluation <- lapply(1:length(all_conditions), FUN = function(condition_counter){
-  generated_samples <- all_conditions[[condition_counter]]
+condition_evaluation <- lapply(1:nrow(all_conditions), FUN = function(condition_counter){
+  # condition_samples <- all_conditions[[condition_counter]]
+  load(paste0("./data/samples_condition_", condition_counter, ".rdata"))
+  
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
@@ -33,19 +35,19 @@ condition_evaluation <- lapply(1:length(all_conditions), FUN = function(conditio
 
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
-  evaluation_samples = parLapply(clust, generated_samples, fun = function(current_sample){
-  # evaluation_samples = lapply(generated_samples, FUN = function(current_sample){
-    # save the first sample of the list as the training sample
-    train_sample <- current_sample$train 
-    # save the second sample of the list as the validation sample
-    validation_sample <- current_sample$validation 
+  evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
+ 
     # evaluate samples analyzed with caret without upsampling
-    output_caret <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                  samplingtype = NULL, oracle_model = current_sample$oracle_model)
+    output_caret <- results.caret(train_data = current_sample$train, 
+                                  validation_data = current_sample$validation,
+                                  samplingtype = NULL, 
+                                  oracle_model = current_sample$oracle_model)
 
     # evaluate samples analyzed with caret with upsampling
-    output_caret_upsampling <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                             samplingtype = "up", oracle_model = current_sample$oracle_model)
+    output_caret_upsampling <- results.caret(train_data = current_sample$train, 
+                                             validation_data = current_sample$validation, 
+                                             samplingtype = "up", 
+                                             oracle_model = current_sample$oracle_model)
  
 
     # save the outputs
@@ -55,8 +57,8 @@ condition_evaluation <- lapply(1:length(all_conditions), FUN = function(conditio
     names(output_results) <- c("LogReg","ElasticNetRoc","ElasticNetLogloss", "GBMRoc", "GBMLogloss", 
                                "UpsamplingLogReg", "UpsamplingElasticNetRoc", 
                                "UpsamplingElasticNetLogloss", "UpsamplingGBMRoc", "UpsamplingGBMLogloss")
-    loop_counter <<- loop_counter + 1
-    print(paste0(loop_counter, " iterations done", "       Time: ", Sys.time()))
+
+    print(paste0(condition_counter, " iterations done", "       Time: ", Sys.time()))
     return(output_results)
 
   })

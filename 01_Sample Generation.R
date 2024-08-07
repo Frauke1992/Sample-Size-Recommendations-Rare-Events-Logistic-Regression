@@ -67,7 +67,7 @@ all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
                                               beta_vector, 
                                               current_correlation_mat, 
                                               model_x)
-    print(seed_sample)
+    # print(seed_sample)
     # return both samples in a list
     samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
