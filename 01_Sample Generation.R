@@ -72,7 +72,7 @@ all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
     samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
   })
-  save(condition_samples, file = paste0("samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
+  save(condition_samples, file = paste0("./data/samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
   print(paste0("Condition ", i_condition, " done"))
   return(i_condition)
 })
