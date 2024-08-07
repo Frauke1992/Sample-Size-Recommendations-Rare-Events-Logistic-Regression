@@ -18,7 +18,7 @@ condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
 
 
 ###############################
-nloop <- 100 # number of samples for each condition
+nloop <- 1000 # number of samples for each condition
 seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
