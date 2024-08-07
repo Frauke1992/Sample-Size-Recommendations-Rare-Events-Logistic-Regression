@@ -17,10 +17,10 @@ source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 load("samples_total.rdata")
 loop_counter <- 0
 
-condition_evaluation <- lapply(40:length(all_conditions), FUN = function(condition_counter){
+# condition_evaluation <- lapply(1:2, FUN = function(condition_counter){
+condition_evaluation <- lapply(1:length(all_conditions), FUN = function(condition_counter){
   generated_samples <- all_conditions[[condition_counter]]
   logFolder <- getwd()
-  generated_samples 
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
   clust <- makeCluster(20, 
@@ -35,6 +35,7 @@ condition_evaluation <- lapply(40:length(all_conditions), FUN = function(conditi
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
   evaluation_samples = parLapply(clust, generated_samples, fun = function(current_sample){
+  # evaluation_samples = lapply(generated_samples, FUN = function(current_sample){
     # save the first sample of the list as the training sample
     train_sample <- current_sample$train 
     # save the second sample of the list as the validation sample
@@ -45,7 +46,7 @@ condition_evaluation <- lapply(40:length(all_conditions), FUN = function(conditi
 
     # evaluate samples analyzed with caret with upsampling
     output_caret_upsampling <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                             samplingtype = "up")
+                                             samplingtype = "up", oracle_model = current_sample$oracle_model)
  
 
     # save the outputs
@@ -68,8 +69,23 @@ condition_evaluation <- lapply(40:length(all_conditions), FUN = function(conditi
   saveRDS(evaluation_samples, file = paste0("evaluation_data",
                                             Sys.time(), "_condition ",
                                             condition_counter, ".rda"))
-  gc()
-  return(evaluation_samples)
+  return(condition_counter)
 })
 
 
+
+
+
+## gesammelte Fehler:
+# 
+# [1] "225 iterations done       Time: 2024-07-22 09:01:53.311637"
+# Something is wrong; all the ROC metric values are missing:
+#   ROC           Sens        Spec    
+# Min.   : NA   Min.   :1   Min.   : NA  
+# 1st Qu.: NA   1st Qu.:1   1st Qu.: NA  
+# Median : NA   Median :1   Median : NA  
+# Mean   :NaN   Mean   :1   Mean   :NaN  
+# 3rd Qu.: NA   3rd Qu.:1   3rd Qu.: NA  
+# Max.   : NA   Max.   :1   Max.   : NA  
+# NA's   :300               NA's   :300  
+# [1] "226 iterations done       Time: 2024-07-22 09:04:07.914677"
