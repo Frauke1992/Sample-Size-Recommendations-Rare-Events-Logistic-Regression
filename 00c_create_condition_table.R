@@ -5,7 +5,7 @@ sample_sizes <- c(100, 500, 1000, 5000)
 model <- "Y~X1*X2*X3-(X1:X2:X3)"
 intercepts <- b0_30noise[[1]]
 regression_weights <- b0_30noise$beta_weights
-n_noise_variables <- c(5, 10, 20, 30)
+n_noise_variables <- c(5, 15, 30)
 names(regression_weights) <- c("b_X1", "b_X2", "b_X3", "b_X1X2", "b_X1X3", "b_X2X3")
 
 # create a table with the conditions
