@@ -17,7 +17,6 @@ source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 load("samples_total.rdata")
 loop_counter <- 0
 
-# condition_evaluation <- lapply(1:2, FUN = function(condition_counter){
 condition_evaluation <- lapply(1:length(all_conditions), FUN = function(condition_counter){
   generated_samples <- all_conditions[[condition_counter]]
   logFolder <- getwd()

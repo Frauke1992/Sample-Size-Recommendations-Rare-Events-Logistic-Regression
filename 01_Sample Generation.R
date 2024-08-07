@@ -18,7 +18,7 @@ condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
 
 
 ###############################
-nloop <- 100 # number of samples for each condition
+nloop <- 1000 # number of samples for each condition
 seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
@@ -72,11 +72,13 @@ all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
     samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
   })
-  return(condition_samples)
+  save(condition_samples, file = paste0("samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
+  print(paste0("Condition ", i_condition, " done"))
+  return(i_condition)
 })
 
 # save the samples in rda files
-save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
+# save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
 
 
 
