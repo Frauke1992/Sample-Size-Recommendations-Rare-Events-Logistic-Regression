@@ -2,7 +2,7 @@
 
 ##### Load neccessary packages #####
 library(parallel)
-
+nCores = 5
 # set directory to folder containing necessary scripts
 directory_script <- getwd()
 
@@ -10,21 +10,37 @@ directory_script <- getwd()
 source(paste0(directory_script, "/02a_Functions Sample Evaluation.R"))
 source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 
-
-
 ####### Sample evaluation #######
 #load the samples
 # Read in table containing different combinations of simulation factors
 condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
+condition_table$cond_nr <- 1:nrow(condition_table)
 
-condition_evaluation <- lapply(1:nrow(all_conditions), FUN = function(condition_counter){
-  # condition_samples <- all_conditions[[condition_counter]]
+# determine which conditions are already finished
+allFiles <- list.files(pattern = "evaluation_data")
+finished_conds <- sapply(allFiles, FUN = function(iFile){
+  # Extrahiere die Zahl vor ".rda"
+  extracted_number <- sub(".*_condition (\\d+)\\.rda", "\\1", iFile)
+  # Konvertiere den extrahierten String in eine Zahl
+  extracted_number <- as.numeric(extracted_number)
+})
+
+
+condition_table <- condition_table[!(condition_table$cond_nr %in% finished_conds),]
+
+# sort to run small conditions first
+condition_table <- condition_table[order(condition_table$sample_size, condition_table$n_noise_variables), ]
+
+
+condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
+  # get counter for row so that conditions can be matched with original condition number
+  condition_counter <- condition_table$cond_nr[i_row] 
   load(paste0("./data/samples_condition_", condition_counter, ".rdata"))
   
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(20, 
+  clust <- makeCluster(nCores, 
                        type = "FORK", 
                        outfile = paste0(logFolder, "evaluationDataStatus", 
                                         Sys.Date(),".txt"))
@@ -58,7 +74,7 @@ condition_evaluation <- lapply(1:nrow(all_conditions), FUN = function(condition_
                                "UpsamplingLogReg", "UpsamplingElasticNetRoc", 
                                "UpsamplingElasticNetLogloss", "UpsamplingGBMRoc", "UpsamplingGBMLogloss")
 
-    print(paste0(condition_counter, " iterations done", "       Time: ", Sys.time()))
+    print(paste0(condition_counter, " another sample done", "       Time: ", Sys.time()))
     return(output_results)
 
   })
