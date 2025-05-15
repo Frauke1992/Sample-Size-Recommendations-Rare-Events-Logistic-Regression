@@ -28,12 +28,12 @@ names(beta_init) <- c("b_X1", "b_X2", "b_X3",
                    "b_X1X2", "b_X1X3", "b_X2X3")
 
 # sample size of the optimization sample
-n <- 10000000
+n <- 10e5
 
 #------------- Do optimization for each target marginal probability -------------
 
 # 1) Set up a multisession plan with 10 workers
-plan(multisession, workers = 5)
+plan(multisession, workers = 10)
 
 # 2) Generate 20 distinct random seeds
 set.seed(42)
@@ -91,7 +91,7 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
   X_chk_mm  <- model.matrix(~X1 * X2 * X3 - (X1:X2:X3), data = X_chk_df)
   
   # Auch hier räumen wir auf
-  rm(X_chk_raw, X_chk_df)
+  rm(X_chk_raw)
   gc()
   
   ## —————— 5. Validierung & Rückgabe ——————
@@ -118,7 +118,7 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
   
   ## Wichtig: X_chk_mm kann jetzt ebenfalls entfernt werden,
   ## falls Sie es nicht mehr außerhalb brauchen:
-  rm(X_chk_mm)
+  rm(X_chk_mm, X_chk_df)
   gc()
   
   list(results = results, checks = checks)
