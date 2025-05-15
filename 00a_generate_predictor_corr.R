@@ -7,7 +7,7 @@ set.seed(123)
 
 # draw a large random correlation matrix including the maximum number of predictors and noise variables
 n_predictors <- 3
-correlation_mat <- rcorrmatrix(33)
+correlation_mat <- clusterGeneration::rcorrmatrix(33)
 
 # set row and column names for the correlation matrix
 colnames(correlation_mat) <- rownames(correlation_mat) <-    
@@ -18,7 +18,7 @@ correlation_mat[1,2] <- correlation_mat[2,1] <- correlation_mat[1,3] <- correlat
 correlation_mat[2,3] <- correlation_mat[3,2] <- 0.5
 
 # add small values to the diagonal to prevent issues with eigenvalues
-full_correlation_mat <- nearPD(correlation_mat, corr = TRUE, keepDiag = TRUE)
+full_correlation_mat <- Matrix::nearPD(correlation_mat, corr = TRUE, keepDiag = TRUE)
 full_correlation_mat <- as.matrix(full_correlation_mat$mat)
 
 # save random correlation matrix

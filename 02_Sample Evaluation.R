@@ -2,7 +2,7 @@
 
 ##### Load neccessary packages #####
 library(parallel)
-
+nCores = 5
 # set directory to folder containing necessary scripts
 directory_script <- getwd()
 
@@ -10,20 +10,37 @@ directory_script <- getwd()
 source(paste0(directory_script, "/02a_Functions Sample Evaluation.R"))
 source(paste0(directory_script, "/02b_MetaFun Sample Evaluation.R"))
 
-
-
 ####### Sample evaluation #######
 #load the samples
-load("samples_total.rdata")
-loop_counter <- 0
+# Read in table containing different combinations of simulation factors
+condition_table <- as.data.frame(read.csv("Conditions.csv", header = TRUE))
+condition_table$cond_nr <- 1:nrow(condition_table)
 
-# condition_evaluation <- lapply(1:2, FUN = function(condition_counter){
-condition_evaluation <- lapply(1:length(all_conditions), FUN = function(condition_counter){
-  generated_samples <- all_conditions[[condition_counter]]
+# determine which conditions are already finished
+allFiles <- list.files(pattern = "evaluation_data")
+finished_conds <- sapply(allFiles, FUN = function(iFile){
+  # Extrahiere die Zahl vor ".rda"
+  extracted_number <- sub(".*_condition (\\d+)\\.rda", "\\1", iFile)
+  # Konvertiere den extrahierten String in eine Zahl
+  extracted_number <- as.numeric(extracted_number)
+})
+
+
+condition_table <- condition_table[!(condition_table$cond_nr %in% finished_conds),]
+
+# sort to run small conditions first
+condition_table <- condition_table[order(condition_table$sample_size, condition_table$n_noise_variables), ]
+
+
+condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
+  # get counter for row so that conditions can be matched with original condition number
+  condition_counter <- condition_table$cond_nr[i_row] 
+  load(paste0("./data/samples_condition_", condition_counter, ".rdata"))
+  
   logFolder <- getwd()
   # Initiate cluster; type = "FORK" only on Linux/MacOS: contains all 
   # environment variables automatically
-  clust <- makeCluster(20, 
+  clust <- makeCluster(nCores, 
                        type = "FORK", 
                        outfile = paste0(logFolder, "evaluationDataStatus", 
                                         Sys.Date(),".txt"))
@@ -34,19 +51,19 @@ condition_evaluation <- lapply(1:length(all_conditions), FUN = function(conditio
 
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
-  evaluation_samples = parLapply(clust, generated_samples, fun = function(current_sample){
-  # evaluation_samples = lapply(generated_samples, FUN = function(current_sample){
-    # save the first sample of the list as the training sample
-    train_sample <- current_sample$train 
-    # save the second sample of the list as the validation sample
-    validation_sample <- current_sample$validation 
+  evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
+ 
     # evaluate samples analyzed with caret without upsampling
-    output_caret <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                  samplingtype = NULL, oracle_model = current_sample$oracle_model)
+    output_caret <- results.caret(train_data = current_sample$train, 
+                                  validation_data = current_sample$validation,
+                                  samplingtype = NULL, 
+                                  oracle_model = current_sample$oracle_model)
 
     # evaluate samples analyzed with caret with upsampling
-    output_caret_upsampling <- results.caret(train_data = train_sample, validation_data = validation_sample, 
-                                             samplingtype = "up", oracle_model = current_sample$oracle_model)
+    output_caret_upsampling <- results.caret(train_data = current_sample$train, 
+                                             validation_data = current_sample$validation, 
+                                             samplingtype = "up", 
+                                             oracle_model = current_sample$oracle_model)
  
 
     # save the outputs
@@ -56,8 +73,8 @@ condition_evaluation <- lapply(1:length(all_conditions), FUN = function(conditio
     names(output_results) <- c("LogReg","ElasticNetRoc","ElasticNetLogloss", "GBMRoc", "GBMLogloss", 
                                "UpsamplingLogReg", "UpsamplingElasticNetRoc", 
                                "UpsamplingElasticNetLogloss", "UpsamplingGBMRoc", "UpsamplingGBMLogloss")
-    loop_counter <<- loop_counter + 1
-    print(paste0(loop_counter, " iterations done", "       Time: ", Sys.time()))
+
+    print(paste0(condition_counter, " another sample done", "       Time: ", Sys.time()))
     return(output_results)
 
   })

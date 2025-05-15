@@ -23,7 +23,13 @@ seed_sample <- 123
 seed_validation <- 321321
 ####### Sample Generation #######
 ##### Loop to go through different conditions in condition_table #####
-all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
+
+clust <- makeCluster(24, 
+                     type = "FORK", 
+                     outfile = paste0("evaluationDataStatus", 
+                                      Sys.Date(),".txt"))
+
+all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_condition){
   conditions <- condition_table[i_condition,]
   options(warn = 0)
   ##### Extracting information: Get information for current condition #####
@@ -67,16 +73,19 @@ all_conditions <- lapply(1:nrow(condition_table), FUN = function(i_condition){
                                               beta_vector, 
                                               current_correlation_mat, 
                                               model_x)
-    print(seed_sample)
+    # print(seed_sample)
     # return both samples in a list
     samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
   })
-  return(condition_samples)
+  save(condition_samples, file = paste0("./data/samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
+  print(paste0("Condition ", i_condition, " done"))
+  return(i_condition)
 })
 
+stopCluster(clust)
 # save the samples in rda files
-save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
+# save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
 
 
 

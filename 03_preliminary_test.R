@@ -55,3 +55,12 @@ issues
   }, simplify = "array")
   
 
+## Ziele:
+## erste Auswertung der Selection Rates für Enet für alle Bedingungen und alle Effekte
+  # darstellen als Funktion der Bedingung
+  # plausibel?
+
+## GBM dann erst in einem späteren Schritt auswerten
+## erste Auswertung der Selection Rates für GBM für alle Bedingungen und alle Effekte -> wie quantifizieren?
+  
+  

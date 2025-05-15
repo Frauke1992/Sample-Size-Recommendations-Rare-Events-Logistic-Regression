@@ -5,54 +5,6 @@
 samples_total.rdata
 .rda
 .Rapp.history
-evaluation_data2024-07-14 09:12:53.516511_condition 1.rda
-evaluation_data2024-07-14 09:22:31.501208_condition 2.rda
-evaluation_data2024-07-14 09:38:03.491365_condition 3.rda
-evaluation_data2024-07-14 10:44:33.531379_condition 4.rda
-evaluation_data2024-07-14 10:49:37.219864_condition 5.rda
-evaluation_data2024-07-14 11:02:13.820709_condition 6.rda
-evaluation_data2024-07-14 11:20:35.289508_condition 7.rda
-evaluation_data2024-07-14 12:56:43.724863_condition 8.rda
-evaluation_data2024-07-14 13:01:40.33292_condition 9.rda
-evaluation_data2024-07-14 13:15:12.151421_condition 10.rda
-evaluation_data2024-07-14 13:37:10.002017_condition 11.rda
-evaluation_data2024-07-14 15:17:03.312747_condition 12.rda
-evaluation_data2024-07-14 15:20:01.058501_condition 13.rda
-evaluation_data2024-07-14 15:31:56.906617_condition 14.rda
-evaluation_data2024-07-14 15:52:32.548121_condition 15.rda
-evaluation_data2024-07-14 17:54:06.960304_condition 16.rda
-evaluation_data2024-07-14 17:56:03.610076_condition 17.rda
-evaluation_data2024-07-14 18:06:03.141937_condition 18.rda
-evaluation_data2024-07-14 18:26:13.342573_condition 19.rda
-evaluation_data2024-07-14 20:36:44.480461_condition 20.rda
-evaluation_data2024-07-14 20:42:14.478071_condition 21.rda
-evaluation_data2024-07-14 20:54:20.134785_condition 22.rda
-evaluation_data2024-07-14 21:13:13.640501_condition 23.rda
-evaluation_data2024-07-14 22:31:13.906744_condition 24.rda
-evaluation_data2024-07-14 22:36:44.498199_condition 25.rda
-evaluation_data2024-07-14 22:53:32.515194_condition 26.rda
-evaluation_data2024-07-14 23:26:38.71302_condition 27.rda
-evaluation_data2024-07-15 01:21:42.842209_condition 28.rda
-evaluation_data2024-07-15 01:27:07.453115_condition 29.rda
-evaluation_data2024-07-15 01:41:06.666633_condition 30.rda
-evaluation_data2024-07-15 02:13:26.922581_condition 31.rda
-evaluation_data2024-07-15 04:17:58.147259_condition 32.rda
-evaluation_data2024-07-15 04:21:03.724676_condition 33.rda
-evaluation_data2024-07-15 04:33:11.520658_condition 34.rda
-evaluation_data2024-07-15 04:55:13.847471_condition 35.rda
-evaluation_data2024-07-15 07:53:56.580204_condition 36.rda
-evaluation_data2024-07-15 07:56:13.585106_condition 37.rda
-evaluation_data2024-07-15 08:07:33.558316_condition 38.rda
-evaluation_data2024-07-15 08:27:56.722842_condition 39.rda
-evaluation_data2024-07-16 18:46:55.29213_condition 40.rda
-evaluation_data2024-07-16 18:53:27.073365_condition 41.rda
-evaluation_data2024-07-16 19:15:48.00966_condition 42.rda
-evaluation_data2024-07-16 19:59:16.344457_condition 43.rda
-evaluation_data2024-07-16 21:55:09.425122_condition 44.rda
-evaluation_data2024-07-16 22:02:02.638063_condition 45.rda
-evaluation_data2024-07-16 22:20:31.723354_condition 46.rda
-evaluation_data2024-07-16 22:58:14.675062_condition 47.rda
-evaluation_data2024-07-17 02:23:53.147357_condition 48.rda
-evaluation_data2024-07-17 02:30:36.822217_condition 49.rda
-evaluation_data2024-07-17 02:47:48.701162_condition 50.rda
-evaluation_data2024-07-17 03:20:29.615746_condition 51.rda
+data/
+.DS_Store
+14_SKV_Z_H0_H1.pdf

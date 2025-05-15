@@ -1,0 +1,157 @@
+# Load Packages
+library(clusterGeneration)
+library(MASS)
+library(Matrix)
+library(akima)
+library(future)
+library(future.apply)
+library(pROC)
+options(future.globals.maxSize = 1.0 * 1e9)
+
+# Load simulated correlation matrix
+load("full_correlation_mat.RData")
+corMatrix <- full_correlation_mat[1:8,1:8]
+
+# Target AUC value
+target_auc  <- 0.75
+
+# Target marginal probabilities
+target_fracs <- c(0.5, 0.1, 0.05, 0.01)
+
+# Initial betas:
+# Note, these are not the actual coefficients
+# rather they determine the relative sizes of the effects to each other
+beta_init <- c(1,2,3,
+               1,2,3)
+# for easier interpretation:
+names(beta_init) <- c("b_X1", "b_X2", "b_X3",
+                   "b_X1X2", "b_X1X3", "b_X2X3")
+
+# sample size of the optimization sample
+n <- 10000000
+
+#------------- Do optimization for each target marginal probability -------------
+
+# 1) Set up a multisession plan with 10 workers
+plan(multisession, workers = 5)
+
+# 2) Generate 20 distinct random seeds
+set.seed(42)
+seeds <- sample.int(1e6, 20)
+
+# 3) Define the single-run function, explicitly accepting all globals
+run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
+  ## —————— 1. Generierung der Trainingsdaten ——————
+  set.seed(seed)
+  X_raw <- mvrnorm(n, mu = rep(0, nrow(corMatrix)),
+                   Sigma = corMatrix, empirical = TRUE)
+  X_df  <- as.data.frame(X_raw)
+  X_mm  <- model.matrix(~0 + X1 * X2 * X3 - (X1:X2:X3), data = X_df)
+  
+  # Große Zwischenobjekte löschen
+  rm(X_raw, X_df)
+  gc()  # Speicher sofort zurückholen
+  
+  ## —————— 2. Definition der Loss-Funktion & Optimierung ——————
+  loss_function <- function(params, target_auc, target_frac, beta_init) {
+    intercept <- params[1]
+    betas     <- params[2] * beta_init
+    linpred   <- drop(intercept + X_mm %*% betas)
+    probs     <- plogis(linpred)
+    y         <- rbinom(n, 1, probs)
+    auc_val   <- tryCatch(auc(y, linpred), error = function(e) 0.5)
+    frac      <- mean(probs)
+    # Quadratsumme der Abweichungen
+    ( (auc_val - 0.5)/0.5 - (target_auc - 0.5)/0.5 )^2 +
+      ( frac - target_frac )^2
+  }
+  
+  results <- t(sapply(target_fracs, function(target_frac) {
+    optim(par    = c(-0.1, 1),
+          fn     = loss_function,
+          target_auc  = target_auc,
+          target_frac = target_frac,
+          beta_init   = beta_init,
+          method = "L-BFGS-B",
+          lower  = c(-Inf, 0),
+          upper  = c( Inf, Inf)
+    )$par -> par
+    c(intercept = par[1], weight = par[2], target_frac = target_frac)
+  }))
+  
+  ## —————— 3. Trainings-Matrix nicht mehr nötig ——————
+  rm(X_mm)
+  gc()
+  
+  ## —————— 4. Generierung der Validierungsdaten ——————
+  set.seed(seed + 1)
+  X_chk_raw <- mvrnorm(n, mu = rep(0, nrow(corMatrix)),
+                       Sigma = corMatrix, empirical = TRUE)
+  X_chk_df  <- as.data.frame(X_chk_raw)
+  X_chk_mm  <- model.matrix(~X1 * X2 * X3 - (X1:X2:X3), data = X_chk_df)
+  
+  # Auch hier räumen wir auf
+  rm(X_chk_raw, X_chk_df)
+  gc()
+  
+  ## —————— 5. Validierung & Rückgabe ——————
+  checks <- apply(results, 1, function(params) {
+    intercept <- params["intercept"]
+    weight    <- params["weight"]
+    betas     <- c(intercept, weight * beta_init)
+    
+    linpred <- drop(X_chk_mm %*% betas)
+    probs   <- plogis(linpred)
+    y       <- rbinom(n, 1, probs)
+    
+    fit     <- glm(y ~ X1 + X2 + X3 + X1:X2 + X1:X3 + X2:X3,
+                   family = binomial, data = X_chk_df)  # Achtung: X_chk_df wurde gelöscht!
+    auc_emp <- auc(y, predict(fit, type = "response"))[1]
+    
+    list(params        = params,
+         betas_target  = weight * beta_init,
+         betas_emp     = fit$coefficients,
+         target_frac   = params["target_frac"],
+         marg_prob_emp = mean(y),
+         auc_emp       = auc_emp)
+  })
+  
+  ## Wichtig: X_chk_mm kann jetzt ebenfalls entfernt werden,
+  ## falls Sie es nicht mehr außerhalb brauchen:
+  rm(X_chk_mm)
+  gc()
+  
+  list(results = results, checks = checks)
+}
+
+# 4) Execute in parallel, passing globals and enabling parallel-safe RNG
+all_runs <- future_lapply(
+  seeds,
+  run_once,
+  n            = n,
+  corMatrix    = corMatrix,
+  beta_init    = beta_init,
+  target_auc   = target_auc,
+  target_fracs = target_fracs,
+  future.seed  = TRUE
+)
+
+# 5) (Optional) Revert to sequential execution
+plan(sequential)
+
+# Example access:
+# all_runs[[1]]$results
+# all_runs[[1]]$checks
+
+all_params <- sapply(all_runs, function(iRun){
+  iRun$results
+}, simplify = "array")
+
+all_params
+apply(all_params, 1:2, function(iRun){ c(M = mean(iRun), SD = sd(iRun)) })
+
+
+all_runs[[1]]$results
+
+
+save(list = ls(), file = "intercepts_and_weights.RData")
