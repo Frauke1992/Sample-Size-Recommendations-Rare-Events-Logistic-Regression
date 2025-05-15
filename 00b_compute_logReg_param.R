@@ -59,7 +59,7 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
     linpred   <- drop(intercept + X_mm %*% betas)
     probs     <- plogis(linpred)
     y         <- rbinom(n, 1, probs)
-    auc_val   <- tryCatch(auc(y, linpred), error = function(e) 0.5)
+    auc_val   <- tryCatch(auc(y, linpred, quiet = TRUE), error = function(e) 0.5)
     frac      <- mean(probs)
     # Quadratsumme der Abweichungen
     ( (auc_val - 0.5)/0.5 - (target_auc - 0.5)/0.5 )^2 +
@@ -106,7 +106,7 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
     
     fit     <- glm(y ~ X1 + X2 + X3 + X1:X2 + X1:X3 + X2:X3,
                    family = binomial, data = X_chk_df)  # Achtung: X_chk_df wurde gelöscht!
-    auc_emp <- auc(y, predict(fit, type = "response"))[1]
+    auc_emp <- auc(y, predict(fit, type = "response"), quiet = TRUE)[1]
     
     list(params        = params,
          betas_target  = weight * beta_init,
