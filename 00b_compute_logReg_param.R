@@ -67,7 +67,7 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
   }
   
   results <- t(sapply(target_fracs, function(target_frac) {
-    optim(par    = c(-0.1, 1),
+    opt <- optim(par    = c(-0.1, 1),
           fn     = loss_function,
           target_auc  = target_auc,
           target_frac = target_frac,
@@ -75,8 +75,8 @@ run_once <- function(seed, n, corMatrix, beta_init, target_auc, target_fracs) {
           method = "L-BFGS-B",
           lower  = c(-Inf, 0),
           upper  = c( Inf, Inf)
-    )$par -> par
-    c(intercept = par[1], weight = par[2], target_frac = target_frac)
+    )
+    c(intercept = opt$par[1], weight = opt$par[2], target_frac = target_frac, conv = opt$convergence)
   }))
   
   ## —————— 3. Trainings-Matrix nicht mehr nötig ——————
@@ -151,6 +151,7 @@ all_params
 apply(all_params, 1:2, function(iRun){ c(M = mean(iRun), SD = sd(iRun)) })
 
 
+all_runs[[1]]$results
 all_runs[[1]]$results
 
 
