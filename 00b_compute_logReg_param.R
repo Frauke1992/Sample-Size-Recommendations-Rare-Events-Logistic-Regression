@@ -10,7 +10,7 @@ options(future.globals.maxSize = 1.0 * 1e9)
 
 # Load simulated correlation matrix
 load("full_correlation_mat.RData")
-corMatrix <- full_correlation_mat[1:8,1:8]
+corMatrix <- full_correlation_mat[1:6,1:6]
 
 # Target AUC value
 target_auc  <- 0.75
@@ -35,11 +35,11 @@ n <- 10e6
 #------------- Do optimization for each target marginal probability -------------
 
 # 1) Set up a multisession plan with 10 workers
-plan(multisession, workers = 10)
+plan(multisession, workers = 20)
 
 # 2) Generate 20 distinct random seeds
 set.seed(42)
-nSeeds <- 10
+nSeeds <- 40
 seeds <- sample.int(1e4, nSeeds, replace = FALSE)
 
 # 3) Define the single-run function, explicitly accepting all globals
@@ -172,4 +172,4 @@ all_runs[[1]]$results
 all_runs[[5]]$checks
 
 
-# save(list = ls(), file = "intercepts_and_weights.RData")
+save(list = ls(), file = "intercepts_and_weights.RData")
