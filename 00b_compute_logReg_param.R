@@ -175,3 +175,7 @@ all_runs[[5]]$checks
 
 
 save(list = ls(), file = "intercepts_and_weights.RData")
+
+
+# git token 
+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
