@@ -164,12 +164,14 @@ all_params <- sapply(all_runs, function(iRun){
   t(iRun$results)
 }, simplify = "array")
 
-
+# Parameters and their standard deviations across runs
 apply(all_params, 1:2, function(iRun){ c(M = mean(iRun), SD = sd(iRun)) })
 
-
+# Optimization results of a single run
 all_runs[[1]]$results
+
+# Validation results of a single run
 all_runs[[5]]$checks
 
 
-# save(list = ls(), file = "intercepts_and_weights.RData")
+save(list = ls(), file = "intercepts_and_weights.RData")
