@@ -164,18 +164,60 @@ all_params <- sapply(all_runs, function(iRun){
   t(iRun$results)
 }, simplify = "array")
 
+# Identify indices where conv != 0
+nonconv_idx <- which(all_params[, "conv", ] != 0, arr.ind = TRUE)
+
+# Set corresponding intercept and weight to NA
+for (i in seq_len(nrow(nonconv_idx))) {
+  row <- nonconv_idx[i, 1]
+  slice <- nonconv_idx[i, 2]
+  all_params[row, "intercept", slice] <- NA
+  all_params[row, "weight", slice] <- NA
+  all_params[row, "conv", slice] <- NA
+}
+
+# Boxplot pro Parameter
+par(mfrow = c(2,2))
+apply(all_params[,"intercept",],1, boxplot)
+dev.off()
+
 # Parameters and their standard deviations across runs
-apply(all_params, 1:2, function(iRun){ c(M = mean(iRun), SD = sd(iRun)) })
+apply(all_params, 1:2, function(iRun){ c(M = mean(iRun, na.rm = TRUE), SD = sd(iRun, na.rm = TRUE)) })
 
-# Optimization results of a single run
-all_runs[[1]]$results
 
-# Validation results of a single run
-all_runs[[5]]$checks
 
+all_checks <- sapply(all_runs, function(iRun){
+  t(sapply(iRun$checks, function(iFrac){
+    c(target_frac = iFrac$target_frac,
+      emp_frac = iFrac$marg_prob_emp,
+      diff_frac = iFrac$target_frac - iFrac$marg_prob_emp,
+      target_auc = target_auc,
+      emp_auc = iFrac$auc_emp,
+      diff_auc = target_auc - iFrac$auc_emp)
+  }, USE.NAMES = TRUE))
+  
+}, USE.NAMES = TRUE, simplify = "array")
+
+n <- 5
+diffs <- as.vector(all_checks[, "diff_frac.target_frac", ])
+order_idx <- order(abs(diffs), decreasing = TRUE)[1:n]
+top_diffs <- diffs[order_idx]
+arr.ind <- arrayInd(order_idx, dim(all_checks)[c(1,3)])
+
+# Übersicht als Tabelle
+top_table <- data.frame(
+  row = arr.ind[,1],
+  slice = arr.ind[,2],
+  diff = top_diffs
+)
+print(top_table)
+
+# delete these top differences 
+all_params[4,c("intercept", "weight"),top_table$slice] <- NA
+
+# Parameters and their standard deviations across runs
+final_params <- apply(all_params, 1:2, function(iRun){ c(M = mean(iRun, na.rm = TRUE), SD = sd(iRun, na.rm = TRUE)) })
 
 save(list = ls(), file = "intercepts_and_weights.RData")
 
 
-# git token 
-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
