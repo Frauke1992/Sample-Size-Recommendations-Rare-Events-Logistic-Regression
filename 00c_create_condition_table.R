@@ -1,7 +1,7 @@
 # get the computed intercepts and weights from 00a
 load("intercepts_and_weights.RData")
 
-sample_sizes <- c(100, 500, 1000, 5000)
+sample_sizes <- c(250, 500, 1000, 5000)
 model <- "Y~X1*X2*X3-(X1:X2:X3)"
 
 

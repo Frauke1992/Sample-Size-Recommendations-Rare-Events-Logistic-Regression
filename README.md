@@ -1,3 +1,8 @@
+## Open Tasks:
+- predict class with prevalence as threshold in addition to 0.5
+- run for 1000 samples instead of only 100
+- manipulate reliability as well 
+
 # Sample Size Recommendations in Rare-Events Logistic Regression
 Code for master thesis titled "Questioning Sample Size Recommendations in Rare-Events Logistic Regressions – a Simulation Study".
 
@@ -37,8 +42,5 @@ In script 03, there is an object called "directory_data" in line 28. The directo
 - 03a: predictors receive NA either when they are non-significant OR if log Reg has failed (then all are NA)
 - labels in figures need to be adapted when the conditions are changed
 
-## To-DO @Florian 
-- generate the masterfile from a script, delete the correlations from this file!
-- do a test run and check the separation criterion, is this criterion too conservative and does it behave better in large samples?
 
 

@@ -64,6 +64,8 @@ resTable <- cbind(resTable, troublePerf, aucPerf, misclassificationPerf, logLoss
 write.csv2(resTable, "resTable.csv", row.names = FALSE)
 
 
+
+
 ######## Extract Coefficients ########
 
 allResCoef <- 

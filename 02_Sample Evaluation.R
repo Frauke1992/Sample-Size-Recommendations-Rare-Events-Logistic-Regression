@@ -2,7 +2,7 @@
 
 ##### Load neccessary packages #####
 library(parallel)
-nCores = 5
+nCores = 25
 # set directory to folder containing necessary scripts
 directory_script <- getwd()
 
