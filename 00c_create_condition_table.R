@@ -8,10 +8,10 @@ model <- "Y~X1*X2*X3-(X1:X2:X3)"
 
 intercepts <- final_params["M",, "intercept"]
 
-regression_weights <- cbind(final_params["M",, "intercept"], final_params["M",, "weight"] %o% beta_init)
+regression_weights <- cbind(target_fracs, final_params["M",, "intercept"], final_params["M",, "weight"] %o% beta_init)
 
 n_noise_variables <- c(5, 15) #c(5, 15, 30) 
-colnames(regression_weights) <- c("intercept", "b_X1", "b_X2", "b_X3", "b_X1X2", "b_X1X3", "b_X2X3")
+colnames(regression_weights) <- c("event_frac", "intercept", "b_X1", "b_X2", "b_X3", "b_X1X2", "b_X1X3", "b_X2X3")
 
 
 # create a table with the conditions

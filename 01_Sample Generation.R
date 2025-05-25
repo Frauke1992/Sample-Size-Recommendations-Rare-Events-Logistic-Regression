@@ -39,7 +39,9 @@ all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_con
   n_noise_variables <- conditions$n_noise_variables 
   # get the betas for the predictors and interactions
   beta_vector <- c(conditions$intercept, unlist(conditions[1,grepl("b_", names(conditions))]))
-
+  
+  # get the reliability
+  reliability <- conditions$reliability
   
   # get the model formula from the table
   model_equation <- conditions$model 
@@ -79,7 +81,7 @@ all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_con
     samples <- list(train = train_values, validation = validation_values, oracle_model = model_formula)
     return(samples)
   })
-  save(condition_samples, file = paste0("./data/samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
+  save(condition_samples, conditions, file = paste0("./data/samples_condition_", i_condition, ".rdata"), compress = TRUE, compression_level = 6)
   print(paste0("Condition ", i_condition, " done"))
   return(i_condition)
 })
