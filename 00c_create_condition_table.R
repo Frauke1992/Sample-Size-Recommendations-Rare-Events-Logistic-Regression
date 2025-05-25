@@ -16,7 +16,7 @@ colnames(regression_weights) <- c("intercept", "b_X1", "b_X2", "b_X3", "b_X1X2",
 
 # create a table with the conditions
 condition_table <- expand.grid(sample_sizes, reliability, model, intercepts, n_noise_variables)
-names(condition_table) <- c("sample_size", "model", "intercept", "n_noise_variables")
+names(condition_table) <- c("sample_size", "reliability", "model", "intercept", "n_noise_variables")
 condition_table <- merge(condition_table, regression_weights, by = "intercept")
 
 # save the table

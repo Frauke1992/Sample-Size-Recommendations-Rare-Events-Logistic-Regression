@@ -53,7 +53,6 @@ all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_con
   
   current_correlation_mat <- full_correlation_mat[1:n_variables, 1:n_variables]
 
-  
   ##### Sample generation #####
   # lapply-loop to generate the samples for the current condition and save them in a nested list
   condition_samples = lapply(1 : nloop, FUN = function(isample){
@@ -61,6 +60,7 @@ all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_con
     set.seed(seed_sample)
     # generate a general sample that serves as training sample
     train_values <- generate.random.data(n_sample, 
+                                         reliability,
                                          beta_vector, 
                                          current_correlation_mat, 
                                          model_x)
@@ -70,6 +70,7 @@ all_conditions <- parLapply(clust, 1:nrow(condition_table), fun = function(i_con
     # generate a validation sample that is half the size of the training sample with 
     # the same conditions for the sample generation
     validation_values <- generate.random.data(n_sample, 
+                                              reliability,
                                               beta_vector, 
                                               current_correlation_mat, 
                                               model_x)
@@ -87,6 +88,9 @@ stopCluster(clust)
 
 # save the samples in rda files
 # save(all_conditions, file = "samples_total.rdata", compress = TRUE, compression_level = 6)
+
+
+
 
 
 
