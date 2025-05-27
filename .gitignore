@@ -15,3 +15,15 @@ gcm-linux_amd64.2.6.1.tar.gz
 git-credential-manager
 linux-install-source.sh
 evaluationDataStatus2025-05-17.txt
+plot_auc.pdf
+plot_logLoss.pdf
+plot_misclassification.pdf
+plot_trouble.pdf
+resTable.csv
+selection_rates.Rdata
+selection_rates_ElasticNetLogloss_plot.pdf
+selection_rates_ElasticNetRoc_plot.pdf
+selection_rates_LogReg_plot.pdf
+selection_rates_UpsamplingElasticNetLogloss_plot.pdf
+selection_rates_UpsamplingElasticNetRoc_plot.pdf
+selection_rates_UpsamplingLogReg_plot.pdf
