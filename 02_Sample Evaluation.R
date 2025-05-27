@@ -33,6 +33,7 @@ condition_table <- condition_table[order(condition_table$sample_size, condition_
 
 
 condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
+
   # get counter for row so that conditions can be matched with original condition number
   condition_counter <- condition_table$cond_nr[i_row] 
   load(paste0("./data/samples_condition_", condition_counter, ".rdata"))
@@ -48,7 +49,7 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
   # set seed that works for parallel processing
   set.seed(342890)
   s <- .Random.seed
-
+  
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
   evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
@@ -56,6 +57,7 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
     # evaluate samples analyzed with caret without upsampling
     output_caret <- results.caret(train_data = current_sample$train, 
                                   validation_data = current_sample$validation,
+                                  event_frac = c(conditions$event_frac, 0.5),
                                   samplingtype = NULL, 
                                   oracle_model = current_sample$oracle_model)
 
@@ -63,6 +65,7 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
     output_caret_upsampling <- results.caret(train_data = current_sample$train, 
                                              validation_data = current_sample$validation, 
                                              samplingtype = "up", 
+                                             event_frac = c(conditions$event_frac, 0.5),
                                              oracle_model = current_sample$oracle_model)
  
 

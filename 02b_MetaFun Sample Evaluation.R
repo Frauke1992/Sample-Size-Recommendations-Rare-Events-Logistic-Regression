@@ -2,7 +2,8 @@
 ##########################################################################
 ##### Function for analysis and error handling for LR and ElasticNet #####
 ##########################################################################
-results.caret <- function(train_data, validation_data, samplingtype, oracle_model = NULL){
+results.caret <- function(train_data, validation_data, samplingtype, event_frac = 0.5, oracle_model = NULL){
+
   ### Logistic regression without regularization ###
   # convert warning messages into error messages
   options(warn = 2) 
@@ -12,7 +13,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   # regression output function, e.g. convergence error
   glm_output <- try({ 
     # run the logistic regression output function
-    output.glm(train_data, validation_data, upsampling = samplingtype, model = oracle_model) 
+    output.glm(train_data, validation_data, upsampling = samplingtype, event_frac = event_frac, model = oracle_model) 
   }, silent = TRUE) # makes sure error messages are suppressed
   # nested if loop to analyze what, if any, errors occurred during the try-function
   # and handle those errors
@@ -48,7 +49,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   ### Elastic Net ###
   enet_output_roc <- try({
     output.enet(train_data, validation_data, samplingtype,
-                summarytype=twoClassSummary, metrictype="ROC")
+                summarytype=twoClassSummary, event_frac = event_frac, metrictype="ROC")
   }, silent = TRUE)
   
   # if an error occured
@@ -61,7 +62,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   errmessage <- NA
   enet_output_logloss <- try({
     output.enet(train_data, validation_data, samplingtype,
-                metrictype = "logLoss", summarytype = mnLogLoss)
+                metrictype = "logLoss", event_frac = event_frac, summarytype = mnLogLoss)
   }, silent = TRUE)
   # if an error occured
   if(class(enet_output_logloss)[1] == "try-error"){
@@ -74,7 +75,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   errmessage <- NA
   gbm_output_roc <- try({
     output.gbm(train_data, validation_data, samplingtype,
-               summarytype=twoClassSummary, metrictype="ROC")
+               summarytype=twoClassSummary, event_frac = event_frac, metrictype="ROC")
   }, silent = TRUE)
   
   # if an error occured
@@ -88,7 +89,7 @@ results.caret <- function(train_data, validation_data, samplingtype, oracle_mode
   errmessage <- NA
   gbm_output_logloss <- try({
     output.gbm(train_data, validation_data, samplingtype,
-               metrictype = "logLoss", summarytype = mnLogLoss)
+               metrictype = "logLoss", event_frac = event_frac, summarytype = mnLogLoss)
   }, silent = TRUE)
   # if an error occured
   if(class(gbm_output_logloss)[1] == "try-error"){

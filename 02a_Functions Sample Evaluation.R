@@ -9,7 +9,7 @@ library(gbm) # for gradient boosting machine
 ####################################################
 ###### Function for LR without regularization ######
 ####################################################
-output.glm <- function(train_data, validation_data, upsampling, model = NULL){
+output.glm <- function(train_data, validation_data, upsampling, event_frac = 0.5, model = NULL){
   # change y to factor
   train_data_caret <- train_data
   train_data_caret$Y <- as.factor(train_data_caret$Y)
@@ -30,11 +30,10 @@ output.glm <- function(train_data, validation_data, upsampling, model = NULL){
                                       summaryFunction = twoClassSummary, 
                                       # upsampling to resolve class imbalance or none
                                       sampling = upsampling)
-
+  
   if(is.null(model)){
     model <- Y ~ (. + .)^2
   } 
-  
   
   # train model
   fit_normal <- train(form = model, 
@@ -56,65 +55,60 @@ output.glm <- function(train_data, validation_data, upsampling, model = NULL){
   coeff_normal <- coef(summary(fit_normal))
   
   # calculate predicted probabilities in training sample
-  predicted_prob_train <- predict(fit_normal, train_data[-1], 
-                                  type = "prob")
-  
-  # assign the predicted probabilities to 0 and 1 class according to
-  # threshold of 0.5
-  predicted_class_train <- as.matrix(round(predicted_prob_train[,2]))
-  
-  # calculate AUC
+  predicted_prob_train <- predict(fit_normal, train_data[-1], type = "prob")
   auc_train <- auc(train_data$Y, predicted_prob_train[,2])
-  
-  # calculate misclassification error
-  misclassification_train <- mean(predicted_class_train != train_data$Y)
-  
-  
-  # calculate logloss
   logloss_train <- mlogLoss(train_data_caret$Y, predicted_prob_train)
   
-  # create confusion matrix
-  confusion_train_normal <- as.matrix(caret::confusionMatrix(
-    data = as.factor(predicted_class_train),
-    reference = as.factor(train_data$Y),
-    positive = "1")$table)
-  
-  #### Analysis of Validation data ####
-  # get predicted probabilities
-  predicted_prob_validation <- predict(fit_normal, validation_data[-1],
-                                       type = "prob" )
-  
-  # assign the predicted probabilities to 0 and 1 class according to
-  # threshold of 0.5
-  predicted_class_validation <- as.matrix(round(predicted_prob_validation)[2])
-  
-  # calculate AUC
+  # get predicted probabilities for validation sample
+  predicted_prob_validation <- predict(fit_normal, validation_data[-1], type = "prob" )
   auc_validation <- auc(validation_data$Y, predicted_prob_validation[,2])
+  logloss_validation <- mlogLoss(validation_data_factor, predicted_prob_validation)
   
-  # calculate misclassification error
-  misclassification_validation <- mean(predicted_class_validation
-                                       != validation_data$Y)
+  # Prepare output lists for each event_frac value
+  misclassification_train <- numeric(length(event_frac))
+  misclassification_validation <- numeric(length(event_frac))
+  balanced_acc_train <- numeric(length(event_frac))
+  balanced_acc_validation <- numeric(length(event_frac))
+  confusion_train_normal <- vector("list", length(event_frac))
+  confusion_validation_normal <- vector("list", length(event_frac))
+  names(confusion_train_normal) <- paste0("event_frac_", event_frac)
+  names(confusion_validation_normal) <- paste0("event_frac_", event_frac)
+  performance_metrics <- matrix(NA, nrow = 2 * length(event_frac), ncol = 4)
+  rownames(performance_metrics) <- as.vector(outer(c("train", "validation"), paste0("_", event_frac), paste0))
+  colnames(performance_metrics) <- c("auc", "misclassification", "logloss", "balanced_accuracy")
   
-  # get deviance
-  logloss_validation <- mlogLoss(validation_data_factor, 
-                                 predicted_prob_validation)
-  
-  # create confusion matrix
-  confusion_validation_normal <- as.matrix(caret::confusionMatrix(
-    data = as.factor(predicted_class_validation),
-    reference = as.factor(validation_data$Y),
-    positive = "1")$table)
-  
-  
-  performance_metrics <- rbind(c(auc_train, 
-                                 misclassification_train, 
-                                 logloss_train),
-                               c(auc_validation,
-                                 misclassification_validation, 
-                                 logloss_validation))
-  colnames(performance_metrics) <- c("auc", "misclassification", "logloss")
-  rownames(performance_metrics) <- c("train", "validation")
-  
+  # Loop over all event_frac values
+  for(i in seq_along(event_frac)) {
+    frac <- event_frac[i]
+    
+    # assign the predicted probabilities to 0 and 1 class according to event_frac threshold
+    predicted_class_train <- as.integer(predicted_prob_train[,2] >= frac)
+    predicted_class_validation <- as.integer(predicted_prob_validation[,2] >= frac)
+    
+    # calculate misclassification error
+    misclassification_train[i] <- mean(predicted_class_train != train_data$Y)
+    misclassification_validation[i] <- mean(predicted_class_validation != validation_data$Y)
+    
+    # calculate balanced accuracy
+    balanced_acc_train[i] <- balanced_accuracy(train_data$Y, predicted_class_train)
+    balanced_acc_validation[i] <- balanced_accuracy(validation_data$Y, predicted_class_validation)
+    
+    # create confusion matrices
+    confusion_train_normal[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_train),
+      reference = as.factor(train_data$Y),
+      positive = "1")$table)
+    confusion_validation_normal[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_validation),
+      reference = as.factor(validation_data$Y),
+      positive = "1")$table)
+    
+    # performance metrics (auc and logloss are threshold-invariant)
+    performance_metrics[2*i-1, ] <- c(auc_train, misclassification_train[i], logloss_train, balanced_acc_train[i])
+    performance_metrics[2*i,   ] <- c(auc_validation, misclassification_validation[i], logloss_validation, balanced_acc_validation[i])
+    rownames(performance_metrics)[2*i-1] <- paste0("train_", frac)
+    rownames(performance_metrics)[2*i]   <- paste0("validation_", frac)
+  }
   
   results_normal <- list(coeff_normal, predicted_prob_validation, 
                          performance_metrics, confusion_train_normal, 
@@ -125,11 +119,10 @@ output.glm <- function(train_data, validation_data, upsampling, model = NULL){
   
   return(results_normal)
 }
-
 #####################################
 ###### Function for ElasticNet ######
 #####################################
-output.enet <- function(train_data, validation_data, upsampling, summarytype, 
+output.enet <- function(train_data, validation_data, upsampling, summarytype, event_frac = 0.5,
                         metrictype){
   
   train_data_caret <- train_data
@@ -185,30 +178,22 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
   
   predicted_prob_train_enet <- predicted_sorted$ONE # select only the probabilities
   
-  # assign the predicted probabilities to 0 and 1 class according to a
-  # threshold of 0.5
-  predicted_class_train_enet <- round(predicted_prob_train_enet)
+  # calculate AUC
   if(metrictype == "ROC"){
     auc_train_enet <- subset(fit_enet$results,
                              alpha== fit_enet$bestTune$alpha &
                                lambda == fit_enet$bestTune$lambda)$ROC
     bestModel_lines <- apply(fit_enet$pred[,c("alpha","lambda")], 1, function(x){all(x == fit_enet$bestTune)})
-    
     # calculate logloss
     logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs[bestModel_lines],
                                         fit_enet$pred[bestModel_lines, c( "ZERO", "ONE")])
     logloss_train_enet <- NA
-    
-    
   } else if(metrictype == "logLoss"){
     # extract logloss
     logloss_train_enet <- subset(fit_enet$results,
                                  alpha== fit_enet$bestTune$alpha &
                                    lambda == fit_enet$bestTune$lambda)$logLoss
-  
-    
     bestModel_lines <- apply(fit_enet$pred[,c("alpha","lambda")], 1, function(x){all(x == fit_enet$bestTune)})
-    
     # calculate logloss
     logloss_train_enet_calc <- mlogLoss(fit_enet$pred$obs[bestModel_lines],
                                         fit_enet$pred[bestModel_lines, c( "ZERO", "ONE")])
@@ -216,60 +201,68 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
     auc_train_enet <- auc(train_data$Y, predicted_prob_train_enet)
   }
   
-  # calculate misclassification error
-  misclassification_train_enet <- mean(predicted_class_train_enet != 
-                                         train_data$Y)
-  
-  
-  # create confusion matrix
-  confusion_train_enet <- as.matrix(confusionMatrix.train(
-    data = fit_enet,
-    norm = "none",
-    positive = 1)$table)
-  
-  #### Analysis of Validation data ####
-  # get predicted probabilities
+  # get predicted probabilities for validation sample
   predicted_prob_validation_enet <- predict(fit_enet, validation_data[-1],
                                             type = "prob" )
-  
-  # assign the predicted probabilities to 0 and 1 class according to
-  # threshold of 0.5
-  predicted_class_validation_enet <- round(predicted_prob_validation_enet[,2])
-  
-  # calculate AUC
-  auc_validation_enet <- auc(validation_data$Y, 
-                             predicted_prob_validation_enet[,2])
-  
-  # calculate misclassification error
-  misclassification_validation_enet <- mean(predicted_class_validation_enet
-                                            != validation_data$Y)
-  
-  # calculate logloss
-  logloss_validation_enet_calc <- mlogLoss(validation_data_factor, 
-                                           predicted_prob_validation_enet)
+  auc_validation_enet <- auc(validation_data$Y, predicted_prob_validation_enet[,2])
+  logloss_validation_enet_calc <- mlogLoss(validation_data_factor, predicted_prob_validation_enet)
   logloss_validation_enet <- NA
   
-  # create confusion matrix
-  confusion_validation_enet <- as.matrix(caret::confusionMatrix(
-    data = as.factor(predicted_class_validation_enet),
-    reference = as.factor(validation_data$Y),
-    positive = "1")$table)
+  # Prepare output for multiple event_frac thresholds
+  misclassification_train_enet <- numeric(length(event_frac))
+  misclassification_validation_enet <- numeric(length(event_frac))
+  balanced_acc_train_enet <- numeric(length(event_frac))
+  balanced_acc_validation_enet <- numeric(length(event_frac))
+  confusion_train_enet <- vector("list", length(event_frac))
+  confusion_validation_enet <- vector("list", length(event_frac))
+  names(confusion_train_enet) <- paste0("event_frac_", event_frac)
+  names(confusion_validation_enet) <- paste0("event_frac_", event_frac)
   
-  #### Create Output ####
-  # bind performance metrics in matrix
-  performance_metrics_enet <- rbind(c(auc_train_enet, 
-                                      misclassification_train_enet, 
-                                      logloss_train_enet,
-                                      logloss_train_enet_calc),
-                                    c(auc_validation_enet,
-                                      misclassification_validation_enet, 
-                                      logloss_validation_enet,
-                                      logloss_validation_enet_calc))
-  # name columns
+  # performance metrics matrix
+  performance_metrics_enet <- matrix(NA, nrow = 2 * length(event_frac), ncol = 5)
+  rownames(performance_metrics_enet) <- as.vector(outer(c("train", "validation"), paste0("_", event_frac), paste0))
   colnames(performance_metrics_enet) <- c("auc", "misclassification", 
-                                          "logLossModel", "logLossCalculated")
-  # name rows
-  rownames(performance_metrics_enet) <- c("train", "validation")
+                                          "logLossModel", "logLossCalculated", "balanced_accuracy")
+  
+  for(i in seq_along(event_frac)) {
+    frac <- event_frac[i]
+    
+    # assign the predicted probabilities to 0 and 1 class according to event_frac threshold
+    predicted_class_train_enet <- as.integer(predicted_prob_train_enet >= frac)
+    predicted_class_validation_enet <- as.integer(predicted_prob_validation_enet[,2] >= frac)
+    
+    # calculate misclassification error
+    misclassification_train_enet[i] <- mean(predicted_class_train_enet != train_data$Y)
+    misclassification_validation_enet[i] <- mean(predicted_class_validation_enet != validation_data$Y)
+    
+    # calculate balanced accuracy
+    balanced_acc_train_enet[i] <- balanced_accuracy(train_data$Y, predicted_class_train_enet)
+    balanced_acc_validation_enet[i] <- balanced_accuracy(validation_data$Y, predicted_class_validation_enet)
+    
+    # create confusion matrices
+    confusion_train_enet[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_train_enet),
+      reference = as.factor(train_data$Y),
+      positive = "1")$table)
+    confusion_validation_enet[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_validation_enet),
+      reference = as.factor(validation_data$Y),
+      positive = "1")$table)
+    
+    # performance metrics (auc, logloss model and calc are threshold-invariant)
+    performance_metrics_enet[2*i-1, ] <- c(auc_train_enet, 
+                                           misclassification_train_enet[i], 
+                                           logloss_train_enet, 
+                                           logloss_train_enet_calc,
+                                           balanced_acc_train_enet[i])
+    performance_metrics_enet[2*i, ] <- c(auc_validation_enet,
+                                         misclassification_validation_enet[i], 
+                                         logloss_validation_enet,
+                                         logloss_validation_enet_calc,
+                                         balanced_acc_validation_enet[i])
+    rownames(performance_metrics_enet)[2*i-1] <- paste0("train_", frac)
+    rownames(performance_metrics_enet)[2*i] <- paste0("validation_", frac)
+  }
   
   # create list with outputs
   results_enet <- list(coeff_enet, 
@@ -294,7 +287,7 @@ output.enet <- function(train_data, validation_data, upsampling, summarytype,
 ###### Function for Gradien Boosting Machine #####
 ##################################################
 
-output.gbm <- function(train_data, validation_data, upsampling, summarytype, 
+output.gbm <- function(train_data, validation_data, upsampling, summarytype, event_frac = 0.5, 
                        metrictype){
   
   train_data_caret <- train_data
@@ -353,26 +346,18 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
   
   predicted_prob_train_gbm <- predicted_sorted$ONE # select only the probabilities
   
-  # assign the predicted probabilities to 0 and 1 class according to a
-  # threshold of 0.5
-  predicted_class_train_gbm <- round(predicted_prob_train_gbm)
+  # calculate AUC
   if(metrictype == "ROC"){
     auc_train_gbm <- subset(fit_gbm$results,
                             n.trees == fit_gbm$bestTune$n.trees & #for the best alpha
                               interaction.depth == fit_gbm$bestTune$interaction.depth &
                               shrinkage == fit_gbm$bestTune$shrinkage &
                               n.minobsinnode == fit_gbm$bestTune$n.minobsinnode)$ROC
-    
-    
-    
     # calculate logloss 
     bestModel_lines <- apply(fit_gbm$pred[,c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1, function(x){all(x == fit_gbm$bestTune)})
     logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs[bestModel_lines],
-                                        fit_gbm$pred[bestModel_lines, c( "ZERO", "ONE")])
-    
+                                       fit_gbm$pred[bestModel_lines, c( "ZERO", "ONE")])
     logloss_train_gbm <- NA
-    
-    
   } else if(metrictype == "logLoss"){
     # extract logloss
     logloss_train_gbm <- subset(fit_gbm$results,
@@ -384,70 +369,77 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
     bestModel_lines <- apply(fit_gbm$pred[,c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1, function(x){all(x == fit_gbm$bestTune)})
     logloss_train_gbm_calc <- mlogLoss(fit_gbm$pred$obs[bestModel_lines],
                                        fit_gbm$pred[bestModel_lines, c( "ZERO", "ONE")])
-    
     # calculate AUC
     auc_train_gbm <- auc(train_data$Y, predicted_prob_train_gbm)
   }
   
-  
-  # calculate misclassification error
-  misclassification_train_gbm <- mean(predicted_class_train_gbm !=
-                                        train_data$Y)
-  
-  
-  # create confusion matrix
-  confusion_train_gbm <- as.matrix(confusionMatrix.train(
-    data = fit_gbm,
-    norm = "none",
-    positive = 1)$table)
-  
-  
-  #### Analysis of Validation data ####
-  # Extract variable importances from gbm
-  varImp_gbm <- varImp(fit_gbm)
-  
-  # get predicted probabilities
+  # get predicted probabilities for validation sample
   predicted_prob_validation_gbm <- predict(fit_gbm, validation_data[-1],
                                            type = "prob" )
-  
-  # assign the predicted probabilities to 0 and 1 class according to
-  # threshold of 0.5
-  predicted_class_validation_gbm <- round(predicted_prob_validation_gbm[,2])
-  
-  # calculate AUC
   auc_validation_gbm <- auc(validation_data$Y,
                             predicted_prob_validation_gbm[,2])
-  
-  # calculate misclassification error
-  misclassification_validation_gbm <- mean(predicted_class_validation_gbm
-                                           != validation_data$Y)
-  
-  # calculate logloss
   logloss_validation_gbm_calc <- mlogLoss(validation_data_factor,
                                           predicted_prob_validation_gbm)
   logloss_validation_gbm <- NA
   
-  # create confusion matrix
-  confusion_validation_gbm <- as.matrix(caret::confusionMatrix(
-    data = as.factor(predicted_class_validation_gbm),
-    reference = as.factor(validation_data$Y),
-    positive = "1")$table)
+  # Prepare output for multiple event_frac thresholds
+  misclassification_train_gbm <- numeric(length(event_frac))
+  misclassification_validation_gbm <- numeric(length(event_frac))
+  balanced_acc_train_gbm <- numeric(length(event_frac))
+  balanced_acc_validation_gbm <- numeric(length(event_frac))
+  confusion_train_gbm <- vector("list", length(event_frac))
+  confusion_validation_gbm <- vector("list", length(event_frac))
+  names(confusion_train_gbm) <- paste0("event_frac_", event_frac)
+  names(confusion_validation_gbm) <- paste0("event_frac_", event_frac)
   
-  #### Create Output ####
-  # bind performance metrics in matrix
-  performance_metrics_gbm <- rbind(c(auc_train_gbm,
-                                     misclassification_train_gbm,
-                                     logloss_train_gbm,
-                                     logloss_train_gbm_calc),
-                                   c(auc_validation_gbm,
-                                     misclassification_validation_gbm,
-                                     logloss_validation_gbm,
-                                     logloss_validation_gbm_calc))
-  # name columns
+  # performance metrics matrix
+  performance_metrics_gbm <- matrix(NA, nrow = 2 * length(event_frac), ncol = 5)
+  rownames(performance_metrics_gbm) <- as.vector(outer(c("train", "validation"), paste0("_", event_frac), paste0))
   colnames(performance_metrics_gbm) <- c("auc", "misclassification",
-                                         "logLossModel", "logLossCalculated")
-  # name rows
-  rownames(performance_metrics_gbm) <- c("train", "validation")
+                                         "logLossModel", "logLossCalculated", "balanced_accuracy")
+  
+  for(i in seq_along(event_frac)) {
+    frac <- event_frac[i]
+    
+    # assign the predicted probabilities to 0 and 1 class according to event_frac threshold
+    predicted_class_train_gbm <- as.integer(predicted_prob_train_gbm >= frac)
+    predicted_class_validation_gbm <- as.integer(predicted_prob_validation_gbm[,2] >= frac)
+    
+    # calculate misclassification error
+    misclassification_train_gbm[i] <- mean(predicted_class_train_gbm != train_data$Y)
+    misclassification_validation_gbm[i] <- mean(predicted_class_validation_gbm != validation_data$Y)
+    
+    # calculate balanced accuracy
+    balanced_acc_train_gbm[i] <- balanced_accuracy(train_data$Y, predicted_class_train_gbm)
+    balanced_acc_validation_gbm[i] <- balanced_accuracy(validation_data$Y, predicted_class_validation_gbm)
+    
+    # create confusion matrices
+    confusion_train_gbm[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_train_gbm),
+      reference = as.factor(train_data$Y),
+      positive = "1")$table)
+    confusion_validation_gbm[[i]] <- as.matrix(caret::confusionMatrix(
+      data = as.factor(predicted_class_validation_gbm),
+      reference = as.factor(validation_data$Y),
+      positive = "1")$table)
+    
+    # performance metrics (auc, logloss model and calc are threshold-invariant)
+    performance_metrics_gbm[2*i-1, ] <- c(auc_train_gbm,
+                                          misclassification_train_gbm[i],
+                                          logloss_train_gbm,
+                                          logloss_train_gbm_calc,
+                                          balanced_acc_train_gbm[i])
+    performance_metrics_gbm[2*i, ] <- c(auc_validation_gbm,
+                                        misclassification_validation_gbm[i],
+                                        logloss_validation_gbm,
+                                        logloss_validation_gbm_calc,
+                                        balanced_acc_validation_gbm[i])
+    rownames(performance_metrics_gbm)[2*i-1] <- paste0("train_", frac)
+    rownames(performance_metrics_gbm)[2*i]   <- paste0("validation_", frac)
+  }
+  
+  # Extract variable importances from gbm
+  varImp_gbm <- varImp(fit_gbm)
   
   # create list with outputs
   results_gbm <- list(varImp_gbm$importance,
@@ -465,4 +457,13 @@ output.gbm <- function(train_data, validation_data, upsampling, summarytype,
   return(results_gbm)
 }
 
-
+# Hilfsfunktion für balanced accuracy
+balanced_accuracy <- function(true, predicted) {
+  TP <- sum(true == 1 & predicted == 1)
+  TN <- sum(true == 0 & predicted == 0)
+  FP <- sum(true == 0 & predicted == 1)
+  FN <- sum(true == 1 & predicted == 0)
+  sens <- if ((TP + FN) > 0) TP / (TP + FN) else NA
+  spec <- if ((TN + FP) > 0) TN / (TN + FP) else NA
+  mean(c(sens, spec), na.rm = TRUE)
+}

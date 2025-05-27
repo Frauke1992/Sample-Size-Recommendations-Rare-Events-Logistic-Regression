@@ -27,3 +27,4 @@ selection_rates_LogReg_plot.pdf
 selection_rates_UpsamplingElasticNetLogloss_plot.pdf
 selection_rates_UpsamplingElasticNetRoc_plot.pdf
 selection_rates_UpsamplingLogReg_plot.pdf
+resTable.csv
