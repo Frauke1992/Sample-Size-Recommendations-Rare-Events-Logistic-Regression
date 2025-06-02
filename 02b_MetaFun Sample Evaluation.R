@@ -22,7 +22,7 @@ results.caret <- function(train_data, validation_data, samplingtype, event_frac 
     
     options(warn = -1) # turn off warnings
     # run the function again without the warnings
-    glm_output <- try({output.glm(train_data, validation_data, 
+    glm_output <- try({output.glm(train_data, validation_data, event_frac = event_frac,
                                   upsampling = samplingtype, model = oracle_model)}, silent = TRUE)
     
     # We adapt the SAS criterion to detect separation
