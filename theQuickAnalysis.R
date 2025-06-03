@@ -6,6 +6,7 @@ library(tidyr)
 library(dplyr)
 library(stringr)
 library(purrr)
+library(tidyverse)
 source("theQuickAnalysisHelpers.R")
 
 ######## Read all data ########
@@ -25,70 +26,89 @@ allRes <- parLapply(myCL, allFiles, function(iFile){
 stopCluster(myCL)
 
 ######## Extract Performance metrics ########
-
 predictivePerformance <- 
-  sapply(allRes, function(iCondition){
-    sapply(iCondition, function(iSample){
+  sapply(allRes, function(isample){
+    sapply(isample, function(iSample){
       sapply(iSample, function(x) {
-        tmp <- x$performanceMetrics["validation",] 
-        if (!is.null(tmp)){
-         if (length(tmp) > 3){
-           tmp <- tmp[c(1:2,4)]
-         }
-         tryCatch({names(tmp)[3] <- "logLoss"}, error = function(e) browser())
-         tmp
-       } else{
-          c(auc = NA, misclassification = NA, logLoss = NA)
+        perf <- x$performanceMetrics
+        if (!is.null(perf)) {
+          extract_validation_metrics(perf)
+        } else {
+          matrix(NA, nrow=4, ncol=4,
+                 dimnames = list(
+                   c("auc", "misclassification", "balanced_accuracy", "logLoss"),
+                   c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")
+                 )
+          )
         }
-      }
-      )    
+      }, simplify = "array")    
     }, simplify = "array")
   }, simplify = "array")
 
-dim(predictivePerformance)
-meanPerf <- apply(predictivePerformance, MARGIN = c(1,2,4), mean, na.rm = TRUE)
-allNA <- apply(predictivePerformance, MARGIN = c(1,2,3,4), is.na)
-meanNA <- apply(allNA, MARGIN = c(1,2,4), mean)
+dimnames(predictivePerformance)[[2]] <- c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")
 
-troublePerf <- t(meanNA["auc",,])
-colnames(troublePerf) <- paste0("trouble_", colnames(meanPerf))
+# 1. Array in Tibble umwandeln:
+df <- as_tibble(as.data.frame.table(predictivePerformance, responseName = "value"))
 
-aucPerf <- t(meanPerf["auc",,])
-colnames(aucPerf) <- paste0("auc_", colnames(meanPerf))
+df_long <- df %>%
+  rename(
+    metric = Var1,
+    threshold = Var2,
+    model = Var3,
+    sample = Var4,
+    condition = Var5
+  ) %>%
+  mutate(
+    threshold = as.character(threshold),
+    model = as.character(model),
+    sample = as.integer(sample),
+    condition = as.integer(condition)
+  )
 
-misclassificationPerf <- t(meanPerf["misclassification",,])
-colnames(misclassificationPerf) <- paste0("misclassification_", colnames(meanPerf))
+# Weiter wie gehabt:
+# 2. Nur relevante thresholds
+df_wide <- df_long %>%
+  filter(threshold %in% c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")) %>%
+  group_by(model, sample, condition, metric) %>%
+  mutate(
+    threshold_prev = first(threshold[threshold != "threshold_0.5"], default = NA_character_)
+  ) %>%
+  filter(threshold == "threshold_0.5" | threshold == threshold_prev) %>%
+  mutate(threshold = if_else(threshold == "threshold_0.5", "threshold_0.5", "threshold_prev")) %>%
+  select(-threshold_prev) %>%
+  pivot_wider(names_from = threshold, values_from = value) %>%
+  ungroup()
 
-logLossPerf <- t(meanPerf["logLoss",,])
-colnames(logLossPerf) <- paste0("logLoss_", colnames(meanPerf))
+# 3. Mittelwerte und NA-Anteile **pro Modell, Condition und Metrik**:
+meanPerf <- df_wide %>%
+  group_by(model, condition, metric) %>%
+  summarise(
+    mean_0.5 = mean(threshold_0.5, na.rm = TRUE),
+    mean_prev = mean(threshold_prev, na.rm = TRUE),
+    na_frac_0.5 = mean(is.na(threshold_0.5)),
+    na_frac_prev = mean(is.na(threshold_prev)),
+    .groups = "drop"
+  )
 
-resTable <- read.csv("Conditions.csv")
-
-resTable <- cbind(resTable, troublePerf, aucPerf, misclassificationPerf, logLossPerf)
-
-write.csv2(resTable, "resTable.csv", row.names = FALSE)
-
-
-# Mapping von Intercept zu Event-Fraction
-event_fracs <- c(0.5, 0.1, 0.05, 0.01)
-
-# Intercepts absteigend sortieren: höchster zuerst, niedrigster zuletzt
-unique_int <- sort(unique(resTable$intercept), decreasing = TRUE)
-mapping <- setNames(event_fracs, unique_int)
-
-resTable <- resTable%>%
-  mutate(event_fraction = factor(mapping[as.character(intercept)], levels = event_fracs))
-
-resTable_long <- resTable %>%
-  pivot_longer(
-    cols = matches("^(trouble|auc|logloss|logLoss|misclassification)_", ignore.case = TRUE),
-    names_to = c("metric", "model_type"),
-    names_pattern = "^([a-zA-Z]+)_(.*)$",
-    values_to = "value"
+# 4. Breit machen: jede Kennzahl eine Spalte (optional nach Bedarf)
+meanPerf_wide <- meanPerf %>%
+  pivot_wider(
+    id_cols = c(model, condition),
+    names_from = metric,
+    values_from = c(mean_0.5, mean_prev, na_frac_0.5, na_frac_prev),
+    names_glue = "{.value}_{metric}"
   )
 
 
+# 4. Merge mit finalTable (angenommen, `sample` ist der Schlüssel)
+condTable <- read.csv("Conditions.csv")
+condTable$condition <- 1:80
+finalTable <- left_join(condTable, meanPerf, by = "condition")
 
+write.csv2(finalTable, "finalTable.csv", row.names = FALSE)
+
+# 3. Modellmapping: Falls die Modellbezeichnung in einer Spalte steht, z. B. 'model' oder 'model_type'
+# Passe ggf. die Spaltennamen an!
 model_map <- c(
   "LogReg" = "LogReg",
   "ElasticNetRoc" = "ENet_ROC",
@@ -102,57 +122,93 @@ model_map <- c(
   "UpsamplingGBMLogloss" = "GBM_Up_LogLoss"
 )
 
-resTable_long <- resTable_long %>%
-  mutate(model_type_short = recode(model_type, !!!model_map))
+finalTable_long <- finalTable %>%
+  mutate(model_type_short = recode(model.y, !!!model_map)) %>%
+  pivot_longer(
+    cols = c(mean_0.5, mean_prev),
+    names_to = "threshold",
+    names_prefix = "mean_",
+    values_to = "value"
+  )
 
-for (m in unique(resTable_long$metric)) {
-  df_metric <- resTable_long %>% filter(metric == m)
-  
-  ylabel <- case_when(
-    m == "trouble" ~ "Trouble Value",
-    m == "auc" ~ "AUC",
-    m == "misclassification" ~ "Misclassification Rate",
-    m == "logLoss" ~ "Log Loss",
-    TRUE ~ m
-  )
-  
-  title <- case_when(
-    m == "trouble" ~ "Troubles in Abhängigkeit von Event Fraction, Sample Size, n_noise_variables und Modell",
-    m == "auc" ~ "AUC in Abhängigkeit von Event Fraction, Sample Size, n_noise_variables und Modell",
-    m == "misclassification" ~ "Misclassification in Abhängigkeit von Event Fraction, Sample Size, n_noise_variables und Modell",
-    m == "logLoss" ~ "Log Loss in Abhängigkeit von Event Fraction, Sample Size, n_noise_variables und Modell",
-    TRUE ~ m
-  )
-  
-  p <- ggplot(df_metric, aes(x = sample_size, y = value,
-                             color = as.factor(n_noise_variables),
-                             group = interaction(n_noise_variables, event_fraction, model_type_short))) +
-    geom_line() +
-    geom_point() +
-    facet_grid(model_type_short ~ event_fraction, scales = "fixed") +
-    labs(x = "Sample Size",
-         y = ylabel,
-         color = "Noise Variables",
-         title = title) +
-    theme_minimal() +
-    theme(
-      strip.text.y = element_text(size = 8),
-      plot.title = element_text(face = "bold")
+finalTable_long <- finalTable_long %>%
+  bind_rows(
+    finalTable %>%
+      mutate(model_type_short = recode(model.y, !!!model_map)) %>%
+      pivot_longer(
+        cols = c(na_frac_0.5, na_frac_prev),
+        names_to = "threshold",
+        names_prefix = "na_frac_",
+        values_to = "value"
+      ) %>%
+      mutate(metric = "trouble")
+  ) %>%
+  select(-mean_0.5, -mean_prev, -na_frac_0.5, -na_frac_prev)
+
+# 4. Plot-Schleife wie zuvor, ggf. Variablennamen anpassen
+for (thresh in c("0.5", "prev")) {
+  for (m in unique(finalTable_long$metric)) {
+    df_metric <- finalTable_long %>%
+      filter(metric == m, threshold == thresh) # oder "mean_prev" für die andere Validierung
+    
+    ylabel <- case_when(
+      m == "trouble" ~ "Trouble Value",
+      m == "auc" ~ "AUC",
+      m == "misclassification" ~ "Misclassification Rate",
+      m == "logLoss" ~ "Log Loss",
+      m == "balanced_accuracy" ~ "Balanced Accuracy",
+      TRUE ~ m
     )
-  
-  pdf(paste0("plot_", m, ".pdf"), width = 11.7, height = 8.3)
-  print(p)
-  dev.off()
+    
+    title <- case_when(
+      m == "trouble" ~ "Troubles in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "auc" ~ "AUC in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "misclassification" ~ "Misclassification in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "logLoss" ~ "Log Loss in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "balanced_accuracy" ~ "Balanced Accuracy in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      TRUE ~ m
+    )
+    
+    p <- ggplot(df_metric, aes(
+      x = sample_size, y = value,
+      color = as.factor(n_noise_variables),
+      linetype = as.factor(reliability),
+      group = interaction(n_noise_variables, event_frac, model_type_short, reliability)
+    )) +
+      geom_line() +
+      geom_point() +
+      facet_grid(model_type_short ~ event_frac, scales = "fixed") +
+      labs(
+        x = "sample Size",
+        y = ylabel,
+        color = "Noise Variables",
+        linetype = "Reliability",
+        title = title
+      ) +
+      theme_minimal() +
+      theme(
+        strip.text.y = element_text(size = 8),
+        plot.title = element_text(face = "bold")
+      )
+    
+    pdf(paste0("plot_", m,"_thresh_", thresh,".pdf"), width = 11.7, height = 8.3)
+    print(p)
+    dev.off()
+    
+    
+  }
 }
+
+
 
 ######## Extract Coefficients ########
 
 allResCoef <- 
-  lapply(allRes, function(iCondition){
-    lapply(iCondition, function(iSample){
-      lapply(names(iSample), function(iModel) {
+  lapply(allRes, function(isample){
+    lapply(isample, function(isample){
+      lapply(names(isample), function(iModel) {
         tryCatch({
-          process_model(iModel, model = iSample[[iModel]])
+          process_model(iModel, model = isample[[iModel]])
         }, error = function(e) {
           print(iModel)
           print(e)
@@ -171,24 +227,24 @@ names(allResCoef_methods) <- names(allRes[[1]][[1]])
 selection <- lapply(names(allResCoef_methods), function(iMethod){
   tmp <- allResCoef_methods[[iMethod]]
   
-  lapply(tmp, function(iCondition){
-    lapply(iCondition, function(iSample){
-      # Falls iSample NULL, gib einen leeren benannten Vektor zurück
-      if (is.null(iSample)) {
+  lapply(tmp, function(isample){
+    lapply(isample, function(isample){
+      # Falls isample NULL, gib einen leeren benannten Vektor zurück
+      if (is.null(isample)) {
         return(setNames(numeric(0), character(0)))
       }
       if (grepl("ElasticNet", iMethod)) {
-        res <- iSample > 0
-        names(res) <- rownames(iSample)
+        res <- isample > 0
+        names(res) <- rownames(isample)
         return(res)
       } else if (grepl("LogReg", iMethod)) {
-        iSample[,"Pr(>|z|)"] <- iSample[,"Pr(>|z|)"] < 0.05
-        res <- iSample[,"Pr(>|z|)"]
-        names(res) <- rownames(iSample)
+        isample[,"Pr(>|z|)"] <- isample[,"Pr(>|z|)"] < 0.05
+        res <- isample[,"Pr(>|z|)"]
+        names(res) <- rownames(isample)
         return(res)
       } else if (grepl("GBM", iMethod)) {
-        res <- iSample > 1
-        names(res) <- rownames(iSample)
+        res <- isample > 1
+        names(res) <- rownames(isample)
         return(res)
       } else {
         stop(paste("Unknown model type:", iMethod))
@@ -200,8 +256,8 @@ selection <- lapply(names(allResCoef_methods), function(iMethod){
 # Schritt 1: Globales Prädiktor-Superset über alle Methoden & Bedingungen sammeln
 all_pred_names <- unique(unlist(
   lapply(selection, function(iMethod)
-    lapply(iMethod, function(iCondition)
-      lapply(iCondition, names)
+    lapply(iMethod, function(isample)
+      lapply(isample, names)
     )
   )
 ))
@@ -230,8 +286,8 @@ make_full_vec <- function(x, all_names) {
 
 # Schritt 2: Erzeuge für jedes Modell die vollständigen Selection-Rates-Matrizen (mit sauberen Namen)
 selection_rates <- lapply(selection, function(iMethod){
-  sapply(iMethod, function(iCondition){
-    mat <- do.call(cbind, lapply(iCondition, function(x) make_full_vec(x, all_pred_names)))
+  sapply(iMethod, function(isample){
+    mat <- do.call(cbind, lapply(isample, function(x) make_full_vec(x, all_pred_names)))
     rownames(mat) <- all_pred_names
     apply(mat, 1, mean, na.rm = TRUE)
   }, simplify = "array")
@@ -263,24 +319,24 @@ model_list <- list(
 
 for (model_name in names(model_list)) {
   mat <- model_list[[model_name]]
-  n_conditions <- ncol(mat)
+  n_samples <- ncol(mat)
   sel_df <- as.data.frame(mat)
   sel_df$predictor <- rownames(sel_df)
   
   # Long-Format
   sel_long <- tidyr::pivot_longer(
     sel_df,
-    cols = all_of(colnames(sel_df)[1:n_conditions]),
+    cols = all_of(colnames(sel_df)[1:n_samples]),
     names_to = "col_idx_chr",
     values_to = "selection_rate"
   ) %>%
-    mutate(col_idx = as.integer(factor(col_idx_chr, levels = colnames(sel_df)[1:n_conditions])))
+    mutate(col_idx = as.integer(factor(col_idx_chr, levels = colnames(sel_df)[1:n_samples])))
   
   # Bedingungen zuordnen
-  resTable_aug <- resTable %>% mutate(col_idx = row_number())
+  finalTable_aug <- finalTable %>% mutate(col_idx = row_number())
   sel_long <- dplyr::left_join(
     sel_long, 
-    resTable_aug %>% select(col_idx, sample_size, n_noise_variables, event_fraction),
+    finalTable_aug %>% select(col_idx, sample_size, n_noise_variables, event_fraction),
     by = "col_idx"
   )
   
@@ -338,7 +394,7 @@ for (model_name in names(model_list)) {
     geom_point(size = 2) +
     ylim(0, 1) +
     facet_wrap(~ event_fraction, nrow = 1) +
-    labs(x = "Sample Size",
+    labs(x = "sample Size",
          y = "Selection Rate",
          color = "Effekt",
          linetype = "Noise Vars",

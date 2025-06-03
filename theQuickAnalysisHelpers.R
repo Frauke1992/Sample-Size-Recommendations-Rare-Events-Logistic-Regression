@@ -1,3 +1,32 @@
+extract_validation_metrics <- function(perf) {
+  wanted <- c("validation_0.01", "validation_0.05", "validation_0.1", "validation_0.5")
+  out <- matrix(NA, nrow = 4, ncol = length(wanted),
+                dimnames = list(
+                  c("auc", "misclassification", "balanced_accuracy", "logLoss"),
+                  wanted
+                ))
+  row_ids <- match(wanted, rownames(perf), nomatch = 0)
+  for (j in seq_along(wanted)) {
+    if (row_ids[j] > 0) {
+      row <- perf[row_ids[j], ]
+      logloss <- if ("logLossCalculated" %in% names(row)) {
+        row[["logLossCalculated"]]
+      } else if ("logloss" %in% names(row)) {
+        row[["logloss"]]
+      } else {
+        NA
+      }
+      out[, j] <- c(
+        auc = row[["auc"]],
+        misclassification = row[["misclassification"]],
+        balanced_accuracy = row[["balanced_accuracy"]],
+        logLoss = logloss
+      )
+    }
+  }
+  out
+}
+
 process_model <- function(name, model, verbose = FALSE) {
   if (grepl("ElasticNet", name)) {
     if (verbose) print(paste("Processing ElasticNet model:", name))
