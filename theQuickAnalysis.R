@@ -7,6 +7,8 @@ library(dplyr)
 library(stringr)
 library(purrr)
 library(tidyverse)
+library(future)
+library(future.apply)
 source("theQuickAnalysisHelpers.R")
 
 ######## Read all data ########
@@ -27,8 +29,8 @@ stopCluster(myCL)
 
 ######## Extract Performance metrics ########
 predictivePerformance <- 
-  sapply(allRes, function(isample){
-    sapply(isample, function(iSample){
+  sapply(allRes, function(iCondition){
+    sapply(iCondition, function(iSample){
       sapply(iSample, function(x) {
         perf <- x$performanceMetrics
         if (!is.null(perf)) {
@@ -211,11 +213,11 @@ for (thresh in c("0.5", "prev")) {
 ######## Extract Coefficients ########
 
 allResCoef <- 
-  lapply(allRes, function(isample){
-    lapply(isample, function(isample){
-      lapply(names(isample), function(iModel) {
+  lapply(allRes, function(iCondition){
+    lapply(iCondition, function(iSample){
+      lapply(names(iSample), function(iModel) {
         tryCatch({
-          process_model(iModel, model = isample[[iModel]])
+          process_model(iModel, model = iSample[[iModel]])
         }, error = function(e) {
           print(iModel)
           print(e)
@@ -234,24 +236,24 @@ names(allResCoef_methods) <- names(allRes[[1]][[1]])
 selection <- lapply(names(allResCoef_methods), function(iMethod){
   tmp <- allResCoef_methods[[iMethod]]
   
-  lapply(tmp, function(isample){
-    lapply(isample, function(isample){
-      # Falls isample NULL, gib einen leeren benannten Vektor zurück
-      if (is.null(isample)) {
+  lapply(tmp, function(iCondition){
+    lapply(iCondition, function(iSample){
+      # Falls iSample NULL, gib einen leeren benannten Vektor zurück
+      if (is.null(iSample)) {
         return(setNames(numeric(0), character(0)))
       }
       if (grepl("ElasticNet", iMethod)) {
-        res <- isample > 0
-        names(res) <- rownames(isample)
+        res <- iSample > 0
+        names(res) <- rownames(iSample)
         return(res)
       } else if (grepl("LogReg", iMethod)) {
-        isample[,"Pr(>|z|)"] <- isample[,"Pr(>|z|)"] < 0.05
-        res <- isample[,"Pr(>|z|)"]
-        names(res) <- rownames(isample)
+        iSample[,"Pr(>|z|)"] <- iSample[,"Pr(>|z|)"] < 0.05
+        res <- iSample[,"Pr(>|z|)"]
+        names(res) <- rownames(iSample)
         return(res)
       } else if (grepl("GBM", iMethod)) {
-        res <- isample > 1
-        names(res) <- rownames(isample)
+        res <- iSample > 1
+        names(res) <- rownames(iSample)
         return(res)
       } else {
         stop(paste("Unknown model type:", iMethod))
@@ -326,25 +328,27 @@ model_list <- list(
 
 for (model_name in names(model_list)) {
   mat <- model_list[[model_name]]
-  n_samples <- ncol(mat)
+  n_conditions <- ncol(mat)
   sel_df <- as.data.frame(mat)
   sel_df$predictor <- rownames(sel_df)
   
   # Long-Format
   sel_long <- tidyr::pivot_longer(
     sel_df,
-    cols = all_of(colnames(sel_df)[1:n_samples]),
+    cols = all_of(colnames(sel_df)[1:n_conditions]),
     names_to = "col_idx_chr",
     values_to = "selection_rate"
   ) %>%
-    mutate(col_idx = as.integer(factor(col_idx_chr, levels = colnames(sel_df)[1:n_samples])))
+    mutate(condition = as.integer(factor(col_idx_chr, levels = colnames(sel_df)[1:n_conditions])))
   
   # Bedingungen zuordnen
-  finalTable_aug <- finalTable %>% mutate(col_idx = row_number())
   sel_long <- dplyr::left_join(
     sel_long, 
-    finalTable_aug %>% select(col_idx, sample_size, n_noise_variables, event_fraction),
-    by = "col_idx"
+    finalTable_long %>%
+      filter(threshold == "0.5") %>%
+      select(condition, sample_size, n_noise_variables, event_frac, reliability)%>%
+      distinct(),
+    by = "condition"
   )
   
   # Prädiktor-Typ klassifizieren (Intercept korrekt behandeln)
@@ -358,8 +362,8 @@ for (model_name in names(model_list)) {
     if (grepl("^X\\d+$", pred)) return("Noise main")
     if (grepl("\\.", pred)) {
       vars <- unlist(strsplit(pred, "\\."))
-      cat("Predictor:", pred, "vars:", paste(vars, collapse = ", "), 
-          "in_signal:", paste(vars %in% signal_vars, collapse = ", "), "\n")
+      # cat("Predictor:", pred, "vars:", paste(vars, collapse = ", "), 
+      #     "in_signal:", paste(vars %in% signal_vars, collapse = ", "), "\n")
       if (all(!vars %in% signal_vars)) {
         return("Noise inter (no signal)")
       } else {
@@ -370,7 +374,9 @@ for (model_name in names(model_list)) {
   }
   
   # Jetzt direkt auf deinen Dataframe anwenden:
-  sel_long$effect_type <- vapply(sel_long$predictor, my_classify, character(1))
+  plan(multisession, workers = 10)
+  sel_long$effect_type <- future_vapply(sel_long$predictor, my_classify, character(1))
+  plan(sequential)
   
   # Filtere raus, was nicht klassifizierbar ist:
   sel_long <- sel_long %>% filter(!is.na(effect_type))
@@ -378,7 +384,7 @@ for (model_name in names(model_list)) {
   # Mittelwerte für Noise-Effekte berechnen
   summarized <- sel_long %>%
     dplyr::filter(stringr::str_detect(effect_type, "Noise")) %>%
-    dplyr::group_by(effect_type, sample_size, n_noise_variables, event_fraction) %>%
+    dplyr::group_by(effect_type, sample_size, n_noise_variables, event_frac, reliability) %>%
     dplyr::summarise(selection_rate = mean(selection_rate, na.rm = TRUE), .groups = "drop")
   
   # Die echten Effekte aus dem Original übernehmen
@@ -396,11 +402,11 @@ for (model_name in names(model_list)) {
               aes(x = as.factor(sample_size), y = selection_rate,
                   color = effect_type,
                   linetype = as.factor(n_noise_variables),
-                  group = interaction(effect_type, n_noise_variables))) +
+                  group = interaction(effect_type, n_noise_variables, reliability))) +
     geom_line(linewidth = 1) +
     geom_point(size = 2) +
     ylim(0, 1) +
-    facet_wrap(~ event_fraction, nrow = 1) +
+    facet_wrap(reliability ~ event_frac, nrow = 2) +
     labs(x = "sample Size",
          y = "Selection Rate",
          color = "Effekt",
