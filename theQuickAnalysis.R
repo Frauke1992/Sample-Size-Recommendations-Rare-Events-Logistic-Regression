@@ -71,11 +71,18 @@ df_wide <- df_long %>%
   filter(threshold %in% c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")) %>%
   group_by(model, sample, condition, metric) %>%
   mutate(
-    threshold_prev = first(threshold[threshold != "threshold_0.5"], default = NA_character_)
+    threshold_non_0.5 = if_else(threshold != "threshold_0.5" & !is.na(value), threshold, NA_character_)
   ) %>%
-  filter(threshold == "threshold_0.5" | threshold == threshold_prev) %>%
-  mutate(threshold = if_else(threshold == "threshold_0.5", "threshold_0.5", "threshold_prev")) %>%
-  select(-threshold_prev) %>%
+  mutate(
+    threshold_prev = if (all(is.na(threshold_non_0.5))) NA_character_ else min(threshold_non_0.5, na.rm = TRUE)
+  ) %>%
+  filter(
+    threshold == "threshold_0.5" | threshold == threshold_prev
+  ) %>%
+  mutate(
+    threshold = if_else(threshold == "threshold_0.5", "threshold_0.5", "threshold_prev")
+  ) %>%
+  select(-threshold_prev, -threshold_non_0.5) %>%
   pivot_wider(names_from = threshold, values_from = value) %>%
   ungroup()
 
@@ -191,7 +198,7 @@ for (thresh in c("0.5", "prev")) {
         plot.title = element_text(face = "bold")
       )
     
-    pdf(paste0("plot_", m,"_thresh_", thresh,".pdf"), width = 11.7, height = 8.3)
+    pdf(paste0("plot_", m,"_thresh_", thresh,".pdf"), height = 11.7, width = 8.3)
     print(p)
     dev.off()
     
