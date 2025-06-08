@@ -84,7 +84,7 @@ df_wide <- df_long %>%
   mutate(
     threshold = if_else(threshold == "threshold_0.5", "threshold_0.5", "threshold_prev")
   ) %>%
-  select(-threshold_prev, -threshold_non_0.5) %>%
+  dplyr::select(-threshold_prev, -threshold_non_0.5) %>%
   pivot_wider(names_from = threshold, values_from = value) %>%
   ungroup()
 
@@ -152,7 +152,7 @@ finalTable_long <- finalTable_long %>%
       ) %>%
       mutate(metric = "trouble")
   ) %>%
-  select(-mean_0.5, -mean_prev, -na_frac_0.5, -na_frac_prev)
+  dplyr::select(-mean_0.5, -mean_prev, -na_frac_0.5, -na_frac_prev)
 
 # 4. Plot-Schleife wie zuvor, ggf. Variablennamen anpassen
 for (thresh in c("0.5", "prev")) {
@@ -420,4 +420,17 @@ for (model_name in names(model_list)) {
     plot = p, width = 11.7, height = 8.3
   )
 }
+
+########### Debugging Spielwiese ########
+
+df_test <- df_wide %>%
+  filter(
+    metric    == "logLoss",
+    model      == "GBMRoc"
+  )
+
+aggregate(threshold_0.5 ~ condition, data = df_test, FUN = mean, na.rm = TRUE, trim = 0.1)
+
+
+
 
