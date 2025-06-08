@@ -145,7 +145,7 @@ all_runs <- future_lapply(
   n            = n,
   corMatrix    = corMatrix,
   beta_init    = beta_init,
-  target_auc   = target_auc,
+  target_aucs   = target_aucs,
   target_fracs = target_fracs,
   future.seed  = TRUE
 )
