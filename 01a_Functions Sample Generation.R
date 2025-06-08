@@ -23,7 +23,7 @@ generate.random.data <- function(nsample, reliability, betavect, corrmat, modelx
   colnames(xmat) <- c(paste0("X", 1 : ncol(xmat))) 
   # turn the x-values of the actual predictors into a model.matrix, according to 
   # the formula provided in modelx
-  xmatrix <- model.matrix(modelx, data = as.data.frame(xmat)) 
+  xmatrix <- model.matrix(modelx, data = as.data.frame(xmat_true)) 
   # calculate the probabilities based on the model.matrix and the betas
   probs <- exp(xmatrix%*%betavect)/(1 + exp(xmatrix%*%betavect)) 
   # draw the y-values, from a binomial distribution following the calculated probabilities
