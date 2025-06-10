@@ -20,7 +20,7 @@ generate.random.data <- function(nsample, reliability, betavect, corrmat, modelx
   xmat <- sqrt(reliability) * xmat_true + sqrt(1 - reliability) * error_mat
   
   # name the columns of the matrix of x-values
-  colnames(xmat) <- c(paste0("X", 1 : ncol(xmat))) 
+  colnames(xmat) <- colnames(xmat_true) <- c(paste0("X", 1 : ncol(xmat))) 
   # turn the x-values of the actual predictors into a model.matrix, according to 
   # the formula provided in modelx
   xmatrix <- model.matrix(modelx, data = as.data.frame(xmat_true)) 
