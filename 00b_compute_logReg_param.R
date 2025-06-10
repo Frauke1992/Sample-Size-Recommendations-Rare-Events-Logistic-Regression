@@ -158,7 +158,7 @@ plan(sequential)
 # all_runs[[1]]$checks
 
 all_params <- sapply(all_runs, function(iRun){
-  t(iRun$results)
+ as.matrix(iRun$results)
 }, simplify = "array")
 
 # Identify indices where conv != 0
@@ -175,45 +175,61 @@ for (i in seq_len(nrow(nonconv_idx))) {
 
 # Boxplot pro Parameter
 par(mfrow = c(2,2))
-apply(all_params[,"intercept",],1, boxplot)
+apply(all_params[,"intercept",],2, boxplot)
+apply(all_params[,"weight",],2, boxplot)
 dev.off()
 
 # Parameters and their standard deviations across runs
-apply(all_params, 1:2, function(iRun){ c(M = mean(iRun, na.rm = TRUE), SD = sd(iRun, na.rm = TRUE)) })
-
-
+all_means <- apply(all_params, 1:2, function(iRun){ c(M = mean(iRun, na.rm = TRUE), SD = sd(iRun, na.rm = TRUE)) })
+all_means <- aperm(all_means, c(2,1,3))
+all_means
 
 all_checks <- sapply(all_runs, function(iRun){
-  t(sapply(iRun$checks, function(iFrac){
-    c(target_frac = iFrac$target_frac,
-      emp_frac = iFrac$marg_prob_emp,
-      diff_frac = iFrac$target_frac - iFrac$marg_prob_emp,
-      target_auc = target_auc,
-      emp_auc = iFrac$auc_emp,
-      diff_auc = target_auc - iFrac$auc_emp)
+  t(sapply(iRun$checks, function(iCond){
+    c(target_frac = iCond$target_frac,
+      emp_frac = iCond$marg_prob_emp,
+      diff_frac = iCond$target_frac - iCond$marg_prob_emp,
+      target_auc = iCond$target_auc,
+      emp_auc = iCond$auc_emp,
+      diff_auc = iCond$target_auc - iCond$auc_emp)
   }, USE.NAMES = TRUE))
   
 }, USE.NAMES = TRUE, simplify = "array")
 
-n <- 5
-diffs <- as.vector(all_checks[, "diff_frac.target_frac", ])
-order_idx <- order(abs(diffs), decreasing = TRUE)[1:n]
-top_diffs <- diffs[order_idx]
-arr.ind <- arrayInd(order_idx, dim(all_checks)[c(1,3)])
+par(mfrow = c(3,4))
+# Für diff_auc
+outliers_auc <- apply(all_checks[, "diff_auc", ], 1, function(x) {
+  bp <- boxplot(x, plot = FALSE)
+  which(x %in% bp$out)
+})
 
-# Übersicht als Tabelle
-top_table <- data.frame(
-  row = arr.ind[,1],
-  slice = arr.ind[,2],
-  diff = top_diffs
-)
-print(top_table)
+# Für diff_frac
+outliers_frac <- apply(all_checks[, "diff_frac", ], 1, function(x) {
+  bp <- boxplot(x, plot = FALSE)
+  which(x %in% bp$out)
+})
 
-# delete these top differences 
-all_params[4,c("intercept", "weight"),top_table$slice] <- NA
+outliers_auc
+outliers_frac
+
+outliers_union <- Map(function(f, a) unique(c(f, a)),
+                      outliers_frac, outliers_auc)
+
+# remove the outliers:
+# Schleife über alle Zeilen
+for(i in seq_along(outliers_union)) {
+  slices <- outliers_union[[i]]
+  if(length(slices) > 0) {
+    # beide Parameter auf NA setzen
+    all_params[i, "intercept", slices] <- NA
+    all_params[i, "weight",    slices] <- NA
+  }
+}
 
 # Parameters and their standard deviations across runs
 final_params <- apply(all_params, 1:2, function(iRun){ c(M = mean(iRun, na.rm = TRUE), SD = sd(iRun, na.rm = TRUE)) })
+final_params <- aperm(final_params, c(2,3,1))
+final_params
 
 save(list = ls(), file = "intercepts_and_weights.RData")
 
