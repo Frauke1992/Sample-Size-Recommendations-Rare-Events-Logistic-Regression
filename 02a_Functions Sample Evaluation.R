@@ -94,12 +94,12 @@ output.glm <- function(train_data, validation_data, upsampling,
     misclass_val[i]   <- mean(pred_class_val   != validation_data_factor)
     
     # 6.3 Confusion Matrices + Sensitivity/Specificity/Balanced Accuracy
-    cm_train <- confusionMatrix(
+    cm_train <- caret::confusionMatrix(
       data     = pred_class_train,
       reference= train_data_caret$Y,
       positive = "ONE"
     )
-    cm_val   <- confusionMatrix(
+    cm_val   <- caret::confusionMatrix(
       data     = pred_class_val,
       reference= validation_data_factor,
       positive = "ONE"
@@ -150,7 +150,6 @@ output.enet <- function(train_data, validation_data, upsampling,
   levels(validation_data_factor) <- c("ZERO", "ONE")
   
   # 2) trainControl mit CV und classProbs
-  library(caret)
   trainControl_enet <- trainControl(
     method = "cv",
     number = 10,
@@ -186,11 +185,12 @@ output.enet <- function(train_data, validation_data, upsampling,
   pred_sorted <- arrange(pred_df, rowIndex)
   prob_train <- pred_sorted$ONE
   
+
   # AUC und LogLoss train
   if (metrictype == "ROC") {
     auc_train_enet <- with(fit_enet$results,
-                           ROC[alpha == bestTune$alpha &
-                                 lambda == bestTune$lambda])
+                           ROC[alpha == fit_enet$bestTune$alpha &
+                                 lambda == fit_enet$bestTune$lambda])
     logloss_train_calc <- mlogLoss(pred_df$obs[bml <-
                                                  apply(pred_df[,c("alpha","lambda")], 1,
                                                        function(x) all(x == fit_enet$bestTune))],
@@ -198,8 +198,8 @@ output.enet <- function(train_data, validation_data, upsampling,
     logloss_train_enet <- NA
   } else if (metrictype == "logLoss") {
     logloss_train_enet <- with(fit_enet$results,
-                               logLoss[alpha == bestTune$alpha &
-                                         lambda == bestTune$lambda])
+                               logLoss[alpha == fit_enet$bestTune$alpha &
+                                         lambda == fit_enet$bestTune$lambda])
     logloss_train_calc <- mlogLoss(pred_df$obs[bml <-
                                                  apply(pred_df[,c("alpha","lambda")], 1,
                                                        function(x) all(x == fit_enet$bestTune))],
@@ -240,7 +240,8 @@ output.enet <- function(train_data, validation_data, upsampling,
     )
   )
   
-  # 7) Schleife
+  
+  # 7) Schleife 
   for (i in seq_along(event_frac)) {
     frac <- event_frac[i]
     # Prädiktionen klassifiziert
@@ -248,8 +249,8 @@ output.enet <- function(train_data, validation_data, upsampling,
     class_val   <- factor(as.integer(prob_val_df[,2] >= frac), levels = c(0,1), labels = levels(train_data_caret$Y))
     
     # Confusion Matrices
-    cm_tr <- confusionMatrix(class_train, train_data_caret$Y, positive = "ONE")
-    cm_val <- confusionMatrix(class_val, validation_data_factor, positive = "ONE")
+    cm_tr <- caret::confusionMatrix(class_train, train_data_caret$Y, positive = "ONE")
+    cm_val <- caret::confusionMatrix(class_val, validation_data_factor, positive = "ONE")
     confusion_train[[i]] <- cm_tr$table
     confusion_val[[i]]   <- cm_val$table
     
@@ -343,20 +344,20 @@ output.gbm <- function(train_data, validation_data, upsampling,
   
   if (metrictype == "ROC") {
     auc_train_gbm <- with(fit_gbm$results,
-                          ROC[interaction.depth == bestTune$interaction.depth &
-                                n.trees == bestTune$n.trees &
-                                shrinkage == bestTune$shrinkage &
-                                n.minobsinnode == bestTune$n.minobsinnode])
+                          ROC[interaction.depth == fit_gbm$bestTune$interaction.depth &
+                                n.trees == fit_gbm$bestTune$n.trees &
+                                shrinkage == fit_gbm$bestTune$shrinkage &
+                                n.minobsinnode == fit_gbm$bestTune$n.minobsinnode])
     best_lines <- apply(pred_df[, c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1,
                         function(x) all(x == fit_gbm$bestTune))
     logloss_train_calc <- mlogLoss(pred_df$obs[best_lines], pred_df[best_lines, c("ZERO", "ONE")])
     logloss_train_gbm <- NA
   } else {
     logloss_train_gbm <- with(fit_gbm$results,
-                              logLoss[interaction.depth == bestTune$interaction.depth &
-                                        n.trees == bestTune$n.trees &
-                                        shrinkage == bestTune$shrinkage &
-                                        n.minobsinnode == bestTune$n.minobsinnode])
+                              logLoss[interaction.depth == fit_gbm$bestTune$interaction.depth &
+                                        n.trees == fit_gbm$bestTune$n.trees &
+                                        shrinkage == fit_gbm$bestTune$shrinkage &
+                                        n.minobsinnode == fit_gbm$bestTune$n.minobsinnode])
     best_lines <- apply(pred_df[, c("n.trees", "interaction.depth", "shrinkage", "n.minobsinnode")], 1,
                         function(x) all(x == fit_gbm$bestTune))
     logloss_train_calc <- mlogLoss(pred_df$obs[best_lines], pred_df[best_lines, c("ZERO", "ONE")])
@@ -400,8 +401,8 @@ output.gbm <- function(train_data, validation_data, upsampling,
     class_tr <- factor(as.integer(prob_train >= frac), levels = c(0,1), labels = levels(train_data_caret$Y))
     class_val<- factor(as.integer(prob_val_df[,2] >= frac), levels = c(0,1), labels = levels(train_data_caret$Y))
     
-    cm_tr  <- confusionMatrix(class_tr,  train_data_caret$Y,     positive = "ONE")
-    cm_val <- confusionMatrix(class_val, validation_data_factor, positive = "ONE")
+    cm_tr  <- caret::confusionMatrix(class_tr,  train_data_caret$Y,     positive = "ONE")
+    cm_val <- caret::confusionMatrix(class_val, validation_data_factor, positive = "ONE")
     confusion_tr[[i]]  <- cm_tr$table
     confusion_val[[i]] <- cm_val$table
     

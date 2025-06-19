@@ -4,6 +4,7 @@
 ##########################################################################
 results.caret <- function(train_data, validation_data, samplingtype, event_frac = 0.5, oracle_model = NULL){
 
+  
   ### Logistic regression without regularization ###
   # convert warning messages into error messages
   options(warn = 2) 
@@ -58,7 +59,7 @@ results.caret <- function(train_data, validation_data, samplingtype, event_frac 
     enet_output_roc$problem = TRUE
     enet_output_roc$errmessage <- errmessage
   }
-  # create an empty object for error messages
+  # create an empty object for error messages  
   errmessage <- NA
   enet_output_logloss <- try({
     output.enet(train_data, validation_data, samplingtype,
