@@ -36,9 +36,9 @@ predictivePerformance <-
         if (!is.null(perf)) {
           extract_validation_metrics(perf)
         } else {
-          matrix(NA, nrow=4, ncol=4,
+          matrix(NA, nrow=6, ncol=4,
                  dimnames = list(
-                   c("auc", "misclassification", "balanced_accuracy", "logLoss"),
+                   c("auc", "misclassification", "logLoss", "balanced_accuracy", "sensitivity", "specificity"),
                    c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")
                  )
           )
@@ -92,10 +92,20 @@ df_wide <- df_long %>%
 meanPerf <- df_wide %>%
   group_by(model, condition, metric) %>%
   summarise(
-    mean_0.5 = mean(threshold_0.5, na.rm = TRUE),
-    mean_prev = mean(threshold_prev, na.rm = TRUE),
+    mean_0.5    = mean(threshold_0.5, na.rm = TRUE),
+    mean_prev   = if ("threshold_prev" %in% names(df_wide)) {
+      # existiert die Spalte, normal aggregieren …
+      mean(threshold_prev, na.rm = TRUE)
+    } else {
+      # sonst immer NA
+      NA_real_
+    },
     na_frac_0.5 = mean(is.na(threshold_0.5)),
-    na_frac_prev = mean(is.na(threshold_prev)),
+    na_frac_prev = if ("threshold_prev" %in% names(df_wide)) {
+      mean(is.na(threshold_prev))
+    } else {
+      NA_real_
+    },
     .groups = "drop"
   )
 
@@ -111,7 +121,7 @@ meanPerf_wide <- meanPerf %>%
 
 # 4. Merge mit finalTable (angenommen, `sample` ist der Schlüssel)
 condTable <- read.csv("Conditions.csv")
-condTable$condition <- 1:80
+condTable$condition <- 1:nrow(condTable)
 finalTable <- left_join(condTable, meanPerf, by = "condition")
 
 write.csv2(finalTable, "finalTable.csv", row.names = FALSE)
@@ -155,42 +165,55 @@ finalTable_long <- finalTable_long %>%
   dplyr::select(-mean_0.5, -mean_prev, -na_frac_0.5, -na_frac_prev)
 
 # 4. Plot-Schleife wie zuvor, ggf. Variablennamen anpassen
-for (thresh in c("0.5", "prev")) {
+# for (thresh in c("0.5","prev")) {
+for (thresh in c("0.5")) {
   for (m in unique(finalTable_long$metric)) {
     df_metric <- finalTable_long %>%
       filter(metric == m, threshold == thresh) # oder "mean_prev" für die andere Validierung
     
+    df_metric$reliability <- factor(
+      df_metric$reliability,
+      levels = c(1, 0.8),
+      labels = c("Reliability 1", "Reliability 0.8")
+    )
+    
     ylabel <- case_when(
-      m == "trouble" ~ "Trouble Value",
-      m == "auc" ~ "AUC",
-      m == "misclassification" ~ "Misclassification Rate",
-      m == "logLoss" ~ "Log Loss",
-      m == "balanced_accuracy" ~ "Balanced Accuracy",
-      TRUE ~ m
+      m == "trouble"              ~ "Trouble Value",
+      m == "auc"                  ~ "AUC",
+      m == "misclassification"    ~ "Misclassification Rate",
+      m == "logLoss"              ~ "Log Loss",
+      m == "balanced_accuracy"    ~ "Balanced Accuracy",
+      m == "sensitivity"          ~ "Sensitivität",
+      m == "specificity"          ~ "Spezifität",
+      TRUE                        ~ m
     )
     
     title <- case_when(
-      m == "trouble" ~ "Troubles in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
-      m == "auc" ~ "AUC in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
-      m == "misclassification" ~ "Misclassification in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
-      m == "logLoss" ~ "Log Loss in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
-      m == "balanced_accuracy" ~ "Balanced Accuracy in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
-      TRUE ~ m
+      m == "trouble"              ~ "Troubles in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "auc"                  ~ "AUC in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "misclassification"    ~ "Misclassification in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "logLoss"              ~ "Log Loss in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "balanced_accuracy"    ~ "Balanced Accuracy in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "sensitivity"          ~ "Sensitivität in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      m == "specificity"          ~ "Spezifität in Abhängigkeit von Event Fraction, sample Size, n_noise_variables und Modell",
+      TRUE                        ~ m
     )
     
     p <- ggplot(df_metric, aes(
       x = sample_size, y = value,
-      color = as.factor(n_noise_variables),
+      color = as.factor(target_auc),
+      shape = as.factor(n_noise_variables),
       linetype = as.factor(reliability),
-      group = interaction(n_noise_variables, event_frac, model_type_short, reliability)
+      group = interaction(n_noise_variables, target_frac, model_type_short, reliability, target_auc)
     )) +
       geom_line() +
       geom_point() +
-      facet_grid(model_type_short ~ event_frac, scales = "fixed") +
+      facet_grid(model_type_short ~ target_frac, scales = "fixed") +
       labs(
         x = "sample Size",
         y = ylabel,
-        color = "Noise Variables",
+        color = "AUC",
+        shape = "Noise Variables",
         linetype = "Reliability",
         title = title
       ) +

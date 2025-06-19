@@ -1,29 +1,43 @@
 extract_validation_metrics <- function(perf) {
-  wanted <- c("validation_0.01", "validation_0.05", "validation_0.1", "validation_0.5")
-  out <- matrix(NA, nrow = 4, ncol = length(wanted),
-                dimnames = list(
-                  c("auc", "misclassification", "balanced_accuracy", "logLoss"),
-                  wanted
-                ))
-  row_ids <- match(wanted, rownames(perf), nomatch = 0)
-  for (j in seq_along(wanted)) {
-    if (row_ids[j] > 0) {
-      row <- perf[row_ids[j], ]
-      logloss <- if ("logLossCalculated" %in% names(row)) {
-        row[["logLossCalculated"]]
-      } else if ("logloss" %in% names(row)) {
-        row[["logloss"]]
-      } else {
-        NA
+  # 1) Feste Validierungs-Schwellen
+  wanted <- c("validation_0.01", "validation_0.05",
+              "validation_0.1",  "validation_0.5")
+  
+  # 2) Alle Spaltennamen sammeln, aber
+  #    - „logloss“, „logLossCalculated“ und evtl. „logLossModel“ entfernen
+  base_mets <- setdiff(colnames(perf),
+                       c("logloss", "logLossCalculated", "logLossModel"))
+  #    und dann „logLoss“ anfügen als einzige Log-Loss-Zeile
+  mets <- c(base_mets, "logLoss")
+  
+  # 3) Matrix initialisieren (Zeilen=Metriken, Spalten=wanted), mit NA vorbelegt
+  out <- matrix(
+    NA_real_,
+    nrow = length(mets),
+    ncol = length(wanted),
+    dimnames = list(mets, wanted)
+  )
+  
+  # 4) Für jede vorhandene Threshold-Zeile Werte übernehmen
+  present <- intersect(wanted, rownames(perf))
+  for (v in present) {
+    rd <- perf[v, , drop = TRUE]
+    
+    # a) alle „Basis“-Metriken direkt
+    for (m in base_mets) {
+      if (m %in% names(rd)) {
+        out[m, v] <- rd[[m]]
       }
-      out[, j] <- c(
-        auc = row[["auc"]],
-        misclassification = row[["misclassification"]],
-        balanced_accuracy = row[["balanced_accuracy"]],
-        logLoss = logloss
-      )
+    }
+    
+    # b) eine einzige logLoss-Zeile
+    if ("logLossCalculated" %in% names(rd)) {
+      out["logLoss", v] <- rd[["logLossCalculated"]]
+    } else if ("logloss" %in% names(rd)) {
+      out["logLoss", v] <- rd[["logloss"]]
     }
   }
+  
   out
 }
 
