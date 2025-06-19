@@ -52,20 +52,21 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
   
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
-  evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
+  # evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
+  evaluation_samples = lapply(condition_samples, FUN = function(current_sample){
  
     # evaluate samples analyzed with caret without upsampling
     output_caret <- results.caret(train_data = current_sample$train, 
                                   validation_data = current_sample$validation,
-                                  event_frac = c(conditions$event_frac, 0.5),
+                                  event_frac = c(conditions$target_frac, 0.5),
                                   samplingtype = NULL, 
                                   oracle_model = current_sample$oracle_model)
-
+    
     # evaluate samples analyzed with caret with upsampling
     output_caret_upsampling <- results.caret(train_data = current_sample$train, 
                                              validation_data = current_sample$validation, 
                                              samplingtype = "up", 
-                                             event_frac = c(conditions$event_frac, 0.5),
+                                             event_frac = c(conditions$target_frac, 0.5),
                                              oracle_model = current_sample$oracle_model)
  
 
