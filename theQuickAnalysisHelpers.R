@@ -1,7 +1,7 @@
 extract_validation_metrics <- function(perf) {
   # 1) Feste Validierungs-Schwellen
-  wanted <- c("validation_0.01", "validation_0.05",
-              "validation_0.1",  "validation_0.5")
+  wanted <- c("validation_0.015625", "validation_0.03125", "validation_0.0625","validation_0.125",
+              "validation_0.25",  "validation_0.5")
   
   # 2) Alle Spaltennamen sammeln, aber
   #    - „logloss“, „logLossCalculated“ und evtl. „logLossModel“ entfernen

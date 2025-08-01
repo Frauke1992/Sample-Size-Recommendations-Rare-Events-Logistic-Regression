@@ -13,7 +13,7 @@ source("theQuickAnalysisHelpers.R")
 
 ######## Read all data ########
 
-allFiles <- list.files(pattern = "evaluation_data.*.rda")
+allFiles <- list.files(path = "./", pattern = "evaluation_data.*.rda", full.names = TRUE)
 
 condition_numbers <- sub(".*_condition (\\d+)\\.rda", "\\1", allFiles)
 condition_numbers <- as.numeric(condition_numbers)
@@ -36,10 +36,11 @@ predictivePerformance <-
         if (!is.null(perf)) {
           extract_validation_metrics(perf)
         } else {
-          matrix(NA, nrow=6, ncol=4,
+          matrix(NA, nrow=6, ncol=6,
                  dimnames = list(
                    c("auc", "misclassification", "logLoss", "balanced_accuracy", "sensitivity", "specificity"),
-                   c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")
+                   c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
+                     "threshold_0.25",  "threshold_0.5")
                  )
           )
         }
@@ -47,7 +48,8 @@ predictivePerformance <-
     }, simplify = "array")
   }, simplify = "array")
 
-dimnames(predictivePerformance)[[2]] <- c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")
+dimnames(predictivePerformance)[[2]] <- c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
+                                          "threshold_0.25",  "threshold_0.5")
 
 # 1. Array in Tibble umwandeln:
 df <- as_tibble(as.data.frame.table(predictivePerformance, responseName = "value"))
@@ -70,7 +72,8 @@ df_long <- df %>%
 # Weiter wie gehabt:
 # 2. Nur relevante thresholds
 df_wide <- df_long %>%
-  filter(threshold %in% c("threshold_0.01", "threshold_0.05", "threshold_0.1", "threshold_0.5")) %>%
+  filter(threshold %in% c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
+                          "threshold_0.25",  "threshold_0.5")) %>%
   group_by(model, sample, condition, metric) %>%
   mutate(
     threshold_non_0.5 = if_else(threshold != "threshold_0.5" & !is.na(value), threshold, NA_character_)
@@ -165,8 +168,7 @@ finalTable_long <- finalTable_long %>%
   dplyr::select(-mean_0.5, -mean_prev, -na_frac_0.5, -na_frac_prev)
 
 # 4. Plot-Schleife wie zuvor, ggf. Variablennamen anpassen
-# for (thresh in c("0.5","prev")) {
-for (thresh in c("0.5")) {
+for (thresh in c("0.5","prev")) {
   for (m in unique(finalTable_long$metric)) {
     df_metric <- finalTable_long %>%
       filter(metric == m, threshold == thresh) # oder "mean_prev" für die andere Validierung
@@ -369,11 +371,11 @@ for (model_name in names(model_list)) {
     sel_long, 
     finalTable_long %>%
       filter(threshold == "0.5") %>%
-      select(condition, sample_size, n_noise_variables, event_frac, reliability)%>%
+      select(condition, sample_size, n_noise_variables, target_auc, target_frac, reliability)%>%
       distinct(),
     by = "condition"
   )
-  
+ 
   # Prädiktor-Typ klassifizieren (Intercept korrekt behandeln)
   # Prüfe jede Zeile per Hand:
   my_classify <- function(pred) {
@@ -407,7 +409,7 @@ for (model_name in names(model_list)) {
   # Mittelwerte für Noise-Effekte berechnen
   summarized <- sel_long %>%
     dplyr::filter(stringr::str_detect(effect_type, "Noise")) %>%
-    dplyr::group_by(effect_type, sample_size, n_noise_variables, event_frac, reliability) %>%
+    dplyr::group_by(effect_type, sample_size, n_noise_variables, target_auc, target_frac, reliability) %>%
     dplyr::summarise(selection_rate = mean(selection_rate, na.rm = TRUE), .groups = "drop")
   
   # Die echten Effekte aus dem Original übernehmen
@@ -420,20 +422,28 @@ for (model_name in names(model_list)) {
     summarized
   )
   
+  final_plotdf$reliability <- factor(
+    final_plotdf$reliability,
+    levels = c(1, 0.8),
+    labels = c("Reliability 1", "Reliability 0.8")
+  )
+  
   # Plot
   p <- ggplot(final_plotdf,
               aes(x = as.factor(sample_size), y = selection_rate,
                   color = effect_type,
-                  linetype = as.factor(n_noise_variables),
-                  group = interaction(effect_type, n_noise_variables, reliability))) +
+                  shape = as.factor(n_noise_variables),
+                  linetype = as.factor(target_auc),
+                  group = interaction(effect_type, reliability, target_auc, n_noise_variables, reliability))) +
     geom_line(linewidth = 1) +
     geom_point(size = 2) +
     ylim(0, 1) +
-    facet_wrap(reliability ~ event_frac, nrow = 2) +
+    facet_wrap(reliability + target_auc ~ target_frac, nrow = 4) +
     labs(x = "sample Size",
          y = "Selection Rate",
          color = "Effekt",
-         linetype = "Noise Vars",
+         linetype = "AUC",
+         shape = "Noise Variables",
          title = paste0("Selection Rates (", model_name, ") nach Effekt-Typ")) +
     theme_minimal()
   
