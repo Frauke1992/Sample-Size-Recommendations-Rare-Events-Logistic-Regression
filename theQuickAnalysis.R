@@ -3,6 +3,7 @@
 library(parallel)
 library(ggplot2)
 library(tidyr)
+library(dtplyr)
 library(dplyr)
 library(stringr)
 library(purrr)
@@ -46,7 +47,7 @@ for (i in seq_along(allRes)) {
 qs2::qs_save(allRes, "allRes_reduced.qs2", nthreads = 10)
 
 # Load allRes from file to work locally
-qs2::qs_load("allRes_reduced.qs2")
+allRes <- qs2::qs_read("allRes_reduced.qs2")
 
 ######## Extract Performance metrics ########
 predictivePerformance <- 
