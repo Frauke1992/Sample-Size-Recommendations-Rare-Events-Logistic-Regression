@@ -2,7 +2,7 @@
 
 ##### Load neccessary packages #####
 library(parallel)
-nCores = 25
+nCores = 30
 # set directory to folder containing necessary scripts
 directory_script <- getwd()
 
@@ -31,7 +31,6 @@ condition_table <- condition_table[!(condition_table$cond_nr %in% finished_conds
 # sort to run small conditions first
 condition_table <- condition_table[order(condition_table$sample_size, condition_table$n_noise_variables), ]
 
-
 condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
 
   # get counter for row so that conditions can be matched with original condition number
@@ -52,8 +51,8 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
   
   clusterSetRNGStream(cl = clust, iseed = s)
   # loop to evaluate the samples with the different methods
-  # evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
-  evaluation_samples = lapply(condition_samples, FUN = function(current_sample){
+  evaluation_samples = parLapply(clust, condition_samples, fun = function(current_sample){
+  # evaluation_samples = lapply(condition_samples, FUN = function(current_sample){
  
     # evaluate samples analyzed with caret without upsampling
     output_caret <- results.caret(train_data = current_sample$train, 
@@ -78,7 +77,7 @@ condition_evaluation <- lapply(1:nrow(condition_table), FUN = function(i_row){
                                "UpsamplingLogReg", "UpsamplingElasticNetRoc", 
                                "UpsamplingElasticNetLogloss", "UpsamplingGBMRoc", "UpsamplingGBMLogloss")
 
-    print(paste0(condition_counter, " another sample done", "       Time: ", Sys.time()))
+    # print(paste0(condition_counter, " another sample done", "       Time: ", Sys.time()))
     return(output_results)
 
   })
