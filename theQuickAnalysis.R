@@ -9,9 +9,13 @@ library(purrr)
 library(tidyverse)
 library(future)
 library(future.apply)
+library(qs2)
 source("theQuickAnalysisHelpers.R")
 
 ######## Read all data ########
+# CAREFUL! The overall RAM burden of all files is about 120 GB. 
+# Make sure you have enough RAM available. I have read this in and
+# reduced the object size to about 30 GB to be able to continue on a normal computer.
 
 allFiles <- list.files(path = "./", pattern = "evaluation_data.*.rda", full.names = TRUE)
 
@@ -39,7 +43,10 @@ for (i in seq_along(allRes)) {
 }
 
 # Save reduced allRes to work locally 
-save("allRes", file = "allRes_reduced.Rdata", compress = TRUE)
+qs2::qs_save(allRes, "allRes_reduced.qs2", nthreads = 10)
+
+# Load allRes from file to work locally
+qs2::qs_load("allRes_reduced.qs2")
 
 ######## Extract Performance metrics ########
 predictivePerformance <- 
