@@ -19,18 +19,32 @@ condition_numbers <- sub(".*_condition (\\d+)\\.rda", "\\1", allFiles)
 condition_numbers <- as.numeric(condition_numbers)
 allFiles <- allFiles[order(condition_numbers)]
 
-myCL <- makeCluster(10)
+myCL <- parallel::makeCluster(20, type = "PSOCK")
 
-allRes <- parLapply(myCL, allFiles, function(iFile){
-  currentRes <- readRDS(iFile)
+allRes <- parallel::parLapply(myCL, allFiles, function(iFile) {
+  readRDS(iFile)
 })
 
-stopCluster(myCL)
+parallel::stopCluster(myCL)
+
+# Remove predicted probabilities to decrease RAM burden
+for (i in seq_along(allRes)) {
+  for (j in seq_along(allRes[[i]])) {
+    for (k in seq_along(allRes[[i]][[j]])) {
+      if ("predictedProbabilities" %in% names(allRes[[i]][[j]][[k]])) {
+        allRes[[i]][[j]][[k]][["predictedProbabilities"]] <- NULL
+      }
+    }
+  }
+}
+
+# Save reduced allRes to work locally 
+save("allRes", file = "allRes_reduced.Rdata", compress = TRUE)
 
 ######## Extract Performance metrics ########
 predictivePerformance <- 
   sapply(allRes, function(iCondition){
-    sapply(iCondition, function(iSample){
+   tmp <- sapply(iCondition, function(iSample){
       sapply(iSample, function(x) {
         perf <- x$performanceMetrics
         if (!is.null(perf)) {
@@ -46,10 +60,13 @@ predictivePerformance <-
         }
       }, simplify = "array")    
     }, simplify = "array")
+   if (!is.array(tmp)) browser()
+   tmp
   }, simplify = "array")
 
 dimnames(predictivePerformance)[[2]] <- c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
                                           "threshold_0.25",  "threshold_0.5")
+
 
 # 1. Array in Tibble umwandeln:
 df <- as_tibble(as.data.frame.table(predictivePerformance, responseName = "value"))
