@@ -47,7 +47,7 @@ for (i in seq_along(allRes)) {
 qs2::qs_save(allRes, "allRes_reduced.qs2", nthreads = 10)
 
 # Load allRes from file to work locally
-allRes <- qs2::qs_read("allRes_reduced.qs2")
+allRes <- qs2::qs_read("allRes_reduced.qs2", nthreads = 10)
 
 ######## Extract Performance metrics ########
 predictivePerformance <- 
@@ -75,46 +75,69 @@ predictivePerformance <-
 dimnames(predictivePerformance)[[2]] <- c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
                                           "threshold_0.25",  "threshold_0.5")
 
-
-# 1. Array in Tibble umwandeln:
-df <- as_tibble(as.data.frame.table(predictivePerformance, responseName = "value"))
-
-df_long <- df %>%
+# array in langen df umwandeln
+df_long <- as.data.frame.table(
+  predictivePerformance,
+  responseName = "value"
+) %>%
+  lazy_dt() %>%
   rename(
-    metric = Var1,
+    metric    = Var1,
     threshold = Var2,
-    model = Var3,
-    sample = Var4,
+    model     = Var3,
+    sample    = Var4,
     condition = Var5
   ) %>%
+  # # hier alle rows mit NA in value wegfiltern
+  filter(!is.na(value)) %>%
   mutate(
     threshold = as.character(threshold),
-    model = as.character(model),
-    sample = as.integer(sample),
+    model     = as.character(model),
+    sample    = as.integer(sample),
     condition = as.integer(condition)
-  )
+  ) %>%
+  as_tibble()
 
-# Weiter wie gehabt:
-# 2. Nur relevante thresholds
+
+# Die relevanten Threshold-Namen
+keep <- c("threshold_0.015625", "threshold_0.03125",
+          "threshold_0.0625",   "threshold_0.125",
+          "threshold_0.25",     "threshold_0.5")
+
 df_wide <- df_long %>%
-  filter(threshold %in% c("threshold_0.015625", "threshold_0.03125", "threshold_0.0625","threshold_0.125",
-                          "threshold_0.25",  "threshold_0.5")) %>%
+  lazy_dt() %>%
+  filter(threshold %in% keep) %>%
   group_by(model, sample, condition, metric) %>%
-  mutate(
-    threshold_non_0.5 = if_else(threshold != "threshold_0.5" & !is.na(value), threshold, NA_character_)
+  summarise(
+    # 1) Wert bei 0.5
+    value_0.5 = value[threshold == "threshold_0.5"][1],
+    
+    # 2) Wert bei nächstkleinerer Schwelle oder Duplikat
+    value_prev = {
+      # lokalen Kopien aller relevanten Werte anlegen:
+      val05  <- value[threshold == "threshold_0.5"][1]
+      others <- threshold[threshold != "threshold_0.5" & !is.na(value)]
+      if (length(others) == 0) {
+        # kein anderer Threshold ⇒ Duplikat von value_0.5
+        val05
+      } else {
+        # kleinsten Namen (lexikographisch = numerisch kleinsten Wert) nehmen:
+        th_min <- min(others)
+        value[threshold == th_min][1]
+      }
+    },
+    .groups = "drop"
   ) %>%
-  mutate(
-    threshold_prev = if (all(is.na(threshold_non_0.5))) NA_character_ else min(threshold_non_0.5, na.rm = TRUE)
-  ) %>%
-  filter(
-    threshold == "threshold_0.5" | threshold == threshold_prev
-  ) %>%
-  mutate(
-    threshold = if_else(threshold == "threshold_0.5", "threshold_0.5", "threshold_prev")
-  ) %>%
-  dplyr::select(-threshold_prev, -threshold_non_0.5) %>%
-  pivot_wider(names_from = threshold, values_from = value) %>%
-  ungroup()
+  as_tibble()
+
+
+# Umbenennen
+names(df_wide)[names(df_wide) == "value_0.5"]  <- "threshold_0.5"
+names(df_wide)[names(df_wide) == "value_prev"] <- "threshold_prev"
+
+# Neu sortieren
+df_wide <- df_wide[ , c("metric","model","sample","condition",
+                        "threshold_prev","threshold_0.5")]
 
 # 3. Mittelwerte und NA-Anteile **pro Modell, Condition und Metrik**:
 meanPerf <- df_wide %>%
