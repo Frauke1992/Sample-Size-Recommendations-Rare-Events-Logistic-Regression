@@ -284,7 +284,6 @@ for (thresh in c("0.5","prev")) {
 
 
 ######## Extract Coefficients ########
-
 allResCoef <- 
   lapply(allRes, function(iCondition){
     lapply(iCondition, function(iSample){

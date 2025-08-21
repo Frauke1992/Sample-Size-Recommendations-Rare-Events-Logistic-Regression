@@ -1,30 +1,39 @@
-.Rproj.user
+# --- R / RStudio ---
+.Rproj.user/
 .Rhistory
+.Rapp.history
 .RData
 .Ruserdata
-samples_total.rdata
-.rda
-.Rapp.history
+.Renviron
+# --- R-Datenartefakte / Serialisierte Objekte ---
+*.Rdata
+*.rdata
+*.RData
+*.rda
+*.rds
+*.Rds
+*.qs
+*.qs2
+*_tmp.Rdata
+# --- Daten & Abbildungen (generiert) ---
 data/
 figures/
-.DS_Store
-14_SKV_Z_H0_H1.pdf
-token
-@�mV
-gcm-linux_amd64.2.6.1.tar.gz
+Data_mini_run/
+Eval_100samples/
+# --- Ausgaben / Reports / Plots: alle PDFs ausschließen (case-insensitive) ---
+*.[Pp][Dd][Ff]
+**/*.[Pp][Dd][Ff]
+# --- Archive & Bundles ---
+*.zip
+*.tar.gz
+# --- Projektspezifische generierte Dateien ---
+resTable.csv
+evaluationDataStatus2025-05-17.txt
+# --- Tools / Binaries / Installer ---
 git-credential-manager
 linux-install-source.sh
-evaluationDataStatus2025-05-17.txt
-plot_auc.pdf
-plot_logLoss.pdf
-plot_misclassification.pdf
-plot_trouble.pdf
-resTable.csv
-selection_rates.Rdata
-selection_rates_ElasticNetLogloss_plot.pdf
-selection_rates_ElasticNetRoc_plot.pdf
-selection_rates_LogReg_plot.pdf
-selection_rates_UpsamplingElasticNetLogloss_plot.pdf
-selection_rates_UpsamplingElasticNetRoc_plot.pdf
-selection_rates_UpsamplingLogReg_plot.pdf
-resTable.csv
+# --- Secrets / Tokens ---
+token
+# --- OS-Cruft ---
+.DS_Store
+finalTable.csv
